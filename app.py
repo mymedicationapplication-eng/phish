@@ -193,58 +193,55 @@ def nav_button(label: str, target: str, active: bool, key: str, public: bool = F
 
 
 def render_public_topbar() -> None:
-    left, right = st.columns([1.7, 1])
+    st.markdown("<div class='topbar-shell'>", unsafe_allow_html=True)
+    left, right = st.columns([1.8, 1])
     with left:
         st.markdown(
             f"""
             <div class='topbar-brand'>
                 <div class='topbar-title'>{APP_NAME}</div>
-                <div class='topbar-text'>Enterprise styled phishing detection platform</div>
+                <div class='topbar-text'>Enterprise phishing detection platform</div>
             </div>
             """,
             unsafe_allow_html=True,
         )
     with right:
         nav_cols = st.columns(3)
-        for idx, page in enumerate(PUBLIC_PAGES):
-            with nav_cols[idx]:
-                nav_button(page, page, st.session_state.public_page == page, f'public_{page}', public=True)
+        with st.container():
+            for idx, page in enumerate(PUBLIC_PAGES):
+                with nav_cols[idx]:
+                    nav_button(page, page, st.session_state.public_page == page, f'public_{page}', public=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
 
 def render_app_topbar(user: dict) -> None:
-    render_shell_header()
+    st.markdown("""
+    <div style="background: #ffffff; border-bottom: 1px solid #e2e8f0; padding: 1rem 0; margin-bottom: 2rem;">
+        <div style="max-width: 1200px; margin: 0 auto; padding: 0 2rem; display: flex; justify-content: space-between; align-items: center;">
+            <div style="font-size: 1.5rem; font-weight: 700; color: #2563eb;">🛡️ PhishGuard</div>
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <span style="color: #64748b;">Welcome, <strong>{user['full_name']}</strong></span>
+                <span style="background: {'#10b981' if user.get('role') == 'admin' else '#64748b'}; color: white; padding: 0.25rem 0.75rem; border-radius: 999px; font-size: 0.75rem; font-weight: 600;">{user.get('role', 'user').title()}</span>
+                <button onclick="document.querySelector('[data-testid=stButton]').click()" style="background: #ef4444; color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer;">Sign Out</button>
+            </div>
+        </div>
+    </div>
+    """.format(user=user), unsafe_allow_html=True)
+
+    # Navigation
     all_pages = APP_PAGES.copy()
     if user.get('role') == 'admin':
         all_pages.insert(-1, ADMIN_PAGE)
 
-    st.markdown("<div class='nav-wrap'>", unsafe_allow_html=True)
-    nav_cols = st.columns(len(all_pages))
-    for idx, page in enumerate(all_pages):
+    st.markdown("<div style=\"display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 2rem; max-width: 1200px; margin-left: auto; margin-right: auto; padding: 0 2rem;\">", unsafe_allow_html=True)
+    for page in all_pages:
         short_label = page.replace('Control Center', 'Admin')
-        with nav_cols[idx]:
-            nav_button(short_label, page, st.session_state.app_page == page, f'app_{page}')
-
-    info_left, info_right = st.columns([1.6, 1])
-    with info_left:
-        st.markdown(
-            f"""
-            <div class='user-strip'>
-                <span class='role-pill'>{user.get('role', 'user').title()}</span>
-                <span><strong>{user['full_name']}</strong></span>
-                <span>{user['email']}</span>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-    with info_right:
-        action_cols = st.columns(2)
-        with action_cols[0]:
-            if st.button('Open Account', use_container_width=True, key='open_account_btn'):
-                goto_app('Account')
-                st.rerun()
-        with action_cols[1]:
-            if st.button('Sign Out', use_container_width=True, key='sign_out_top_btn'):
-                logout()
+        active = st.session_state.app_page == page
+        button_type = 'primary' if active else 'secondary'
+        if st.button(short_label, key=f'app_{page}', use_container_width=False, type=button_type):
+            goto_app(page)
+            st.rerun()
+    st.markdown("</div>", unsafe_allow_html=True)
 
 
 def build_scan_report(result: dict, original_text: str) -> str:
@@ -328,82 +325,122 @@ def render_landing() -> None:
     metrics = get_metrics()
     platform_stats = db.get_platform_statistics()
 
-    render_public_topbar()
+    # Header
+    st.markdown("""
+    <div class="header">
+        <div class="header-content">
+            <div class="logo">🛡️ PhishGuard</div>
+            <nav class="nav-links">
+                <a href="#" class="nav-link" onclick="document.querySelector('[data-testid=stButton]').click()">Home</a>
+                <a href="#" class="nav-link">Features</a>
+                <a href="#" class="nav-link">About</a>
+                <a href="#" class="nav-link">Contact</a>
+            </nav>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
-    hero_left, hero_right = st.columns([1.25, 1])
-    with hero_left:
-        st.markdown("<div class='hero-chip'>Final professional academic version</div>", unsafe_allow_html=True)
-        st.markdown(f"<div class='landing-title'>{APP_NAME}</div>", unsafe_allow_html=True)
-        st.markdown(f"<p class='landing-copy'>{APP_TAGLINE}</p>", unsafe_allow_html=True)
-        st.write(
-            'This system is a polished phishing detection platform built with Python, machine learning, authentication, saved history, analytics, and administrative oversight. '
-            'It is designed to present the project as a complete high-level tool rather than a basic demo.'
-        )
-        ctas = st.columns(3)
-        with ctas[0]:
-            if st.button('Login to Platform', use_container_width=True, type='primary'):
-                goto_public('Login')
-                st.rerun()
-        with ctas[1]:
-            if st.button('Create Account', use_container_width=True):
-                goto_public('Register')
-                st.rerun()
-        with ctas[2]:
-            if st.button('View Architecture', use_container_width=True):
-                st.session_state.public_page = 'Landing'
-        stats = st.columns(4)
-        stats[0].metric('Database', 'SQLite')
-        stats[1].metric('Authentication', 'Enabled')
-        stats[2].metric('Admin Console', 'Included')
-        stats[3].metric('Model Accuracy', f"{metrics.get('accuracy', 0):.2%}" if metrics else 'N/A')
-    with hero_right:
-        st.markdown(
-            """
-            <div class='panel-card hero-card'>
-                <h3>System highlights</h3>
-                <ul>
-                    <li>Dedicated landing login and registration screens</li>
-                    <li>Individual scan page and batch analysis page</li>
-                    <li>Personal history export and model explainability</li>
-                    <li>Admin control center and audit trail</li>
-                    <li>Cleaner light UI with product-style navigation</li>
-                </ul>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+    # Hero Section
+    st.markdown("""
+    <div class="hero">
+        <h1 class="hero-title">Advanced Phishing Detection Platform</h1>
+        <p class="hero-subtitle">Professional enterprise-grade solution for detecting and preventing phishing attacks with AI-powered analysis and comprehensive security monitoring.</p>
+        <div class="cta-buttons">
+    """, unsafe_allow_html=True)
 
-    st.markdown("<div class='section-divider'></div>", unsafe_allow_html=True)
-    cards = st.columns(4)
-    cards[0].metric('Users', platform_stats['total_users'])
-    cards[1].metric('Saved Scans', platform_stats['total_scans'])
-    cards[2].metric('High Risk Scans', platform_stats['high_risk_scans'])
-    cards[3].metric('Training Runs', platform_stats['training_runs'])
+    col1, col2, col3 = st.columns([1, 1, 1])
+    with col1:
+        if st.button('🚀 Get Started', use_container_width=True, type='primary'):
+            goto_public('Register')
+            st.rerun()
+    with col2:
+        if st.button('🔐 Login', use_container_width=True):
+            goto_public('Login')
+            st.rerun()
+    with col3:
+        if st.button('📊 Platform Demo', use_container_width=True):
+            goto_public('Landing')
+            st.rerun()
 
-    features = st.columns(3)
-    features[0].markdown(
-        "<div class='panel-card feature-card'><h4>Detection Engine</h4><p>The application uses TF IDF and Logistic Regression to classify messages as phishing or legitimate with probability outputs and explanation signals.</p></div>",
-        unsafe_allow_html=True,
-    )
-    features[1].markdown(
-        "<div class='panel-card feature-card'><h4>Persistence Layer</h4><p>SQLite stores users, scan history, audit activity, and training records inside a portable relational database created automatically by the system.</p></div>",
-        unsafe_allow_html=True,
-    )
-    features[2].markdown(
-        "<div class='panel-card feature-card'><h4>Administrative Oversight</h4><p>Administrators can review activity, manage users, retrain the model, and monitor operational events from a dedicated control center.</p></div>",
-        unsafe_allow_html=True,
-    )
+    st.markdown("</div></div>", unsafe_allow_html=True)
+
+    # Stats Section
+    st.markdown("<div class=\"stats-grid\">", unsafe_allow_html=True)
+    stat_cols = st.columns(4)
+    stat_cols[0].metric('Active Users', platform_stats['active_users'])
+    stat_cols[1].metric('Threats Detected', platform_stats['high_risk_scans'])
+    stat_cols[2].metric('Accuracy Rate', f"{metrics.get('accuracy', 0):.1%}" if metrics else 'N/A')
+    stat_cols[3].metric('Total Scans', platform_stats['total_scans'])
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    # Features Section
+    st.markdown("<div class=\"feature-grid\">", unsafe_allow_html=True)
+
+    features = [
+        {
+            "icon": "🤖",
+            "title": "AI-Powered Detection",
+            "description": "Advanced machine learning algorithms analyze messages with high accuracy, detecting sophisticated phishing attempts that traditional methods miss."
+        },
+        {
+            "icon": "📊",
+            "title": "Real-time Analytics",
+            "description": "Comprehensive dashboards and reporting tools provide insights into security trends, user behavior, and threat patterns."
+        },
+        {
+            "icon": "🔒",
+            "title": "Enterprise Security",
+            "description": "Role-based access control, audit logging, and secure authentication ensure your organization's data remains protected."
+        },
+        {
+            "icon": "⚡",
+            "title": "Batch Processing",
+            "description": "Process thousands of messages simultaneously with our efficient batch analysis tools, perfect for large-scale security operations."
+        }
+    ]
+
+    for feature in features:
+        st.markdown(f"""
+        <div class="feature-card">
+            <h3>{feature['icon']} {feature['title']}</h3>
+            <p>{feature['description']}</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.markdown("</div>", unsafe_allow_html=True)
 
 
 def render_login_page() -> None:
-    render_public_topbar()
-    render_page_header('Login', 'Access the platform through a dedicated sign-in screen with a cleaner professional layout.', 'Public Access')
-    left, right = st.columns([1.1, 0.9])
-    with left:
+    st.markdown("""
+    <div class="header">
+        <div class="header-content">
+            <div class="logo">🛡️ PhishGuard</div>
+            <nav class="nav-links">
+                <a href="#" class="nav-link">Home</a>
+                <a href="#" class="nav-link">Features</a>
+                <a href="#" class="nav-link">About</a>
+            </nav>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown("<div class=\"page-container\">", unsafe_allow_html=True)
+    st.markdown("<div class=\"page-header\"><h1 class=\"page-title\">Welcome Back</h1><p class=\"page-subtitle\">Sign in to access your phishing detection dashboard</p></div>", unsafe_allow_html=True)
+
+    col1, col2 = st.columns([1, 1])
+    with col1:
+        st.markdown("<div class=\"card\">", unsafe_allow_html=True)
+        st.markdown("<h2 class=\"card-title\">Sign In</h2>", unsafe_allow_html=True)
+
         with st.form('login_form', clear_on_submit=False):
-            st.subheader('Sign in to your account')
-            email = st.text_input('Email', placeholder='student@example.com')
-            password = st.text_input('Password', type='password')
+            st.markdown("<div class=\"form-group\"><label class=\"form-label\">Email Address</label>", unsafe_allow_html=True)
+            email = st.text_input('', placeholder='your.email@example.com', label_visibility='collapsed')
+            st.markdown("</div>", unsafe_allow_html=True)
+
+            st.markdown("<div class=\"form-group\"><label class=\"form-label\">Password</label>", unsafe_allow_html=True)
+            password = st.text_input('', type='password', placeholder='Enter your password', label_visibility='collapsed')
+            st.markdown("</div>", unsafe_allow_html=True)
+
             submitted = st.form_submit_button('Sign In', type='primary', use_container_width=True)
             if submitted:
                 ok, message, user = login_user(db, email, password)
@@ -413,38 +450,88 @@ def render_login_page() -> None:
                     st.success(message)
                     st.rerun()
                 st.error(message)
-    with right:
-        st.markdown(
-            f"""
-            <div class='panel-card side-note'>
-                <h3>Default administrator</h3>
-                <p>Use the initial administrator account for first-time access, then change the password from the account page.</p>
-                <p><strong>Email:</strong> {DEFAULT_ADMIN_EMAIL}</p>
-                <p><strong>Password:</strong> {DEFAULT_ADMIN_PASSWORD}</p>
-                <hr />
-                <p>This screen is now independent from registration to provide a clearer user flow and a cleaner presentation during your demo.</p>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-        if st.button('Need a new account?', use_container_width=True, key='go_register_from_login'):
+        st.markdown("</div>", unsafe_allow_html=True)
+
+        st.markdown("<p style=\"text-align: center; margin-top: 1rem;\">Don't have an account? <a href=\"#\" onclick=\"document.querySelector('[data-testid=stButton]').click()\">Create one here</a></p>", unsafe_allow_html=True)
+        if st.button('Create Account', key='go_register_from_login'):
             goto_public('Register')
             st.rerun()
 
+    with col2:
+        st.markdown("""
+        <div class="card">
+            <h3 class="card-title">Platform Benefits</h3>
+            <ul style="list-style: none; padding: 0;">
+                <li style="margin-bottom: 1rem; display: flex; align-items: center;">
+                    <span style="color: #10b981; margin-right: 0.5rem;">✓</span>
+                    Advanced AI-powered threat detection
+                </li>
+                <li style="margin-bottom: 1rem; display: flex; align-items: center;">
+                    <span style="color: #10b981; margin-right: 0.5rem;">✓</span>
+                    Real-time security analytics
+                </li>
+                <li style="margin-bottom: 1rem; display: flex; align-items: center;">
+                    <span style="color: #10b981; margin-right: 0.5rem;">✓</span>
+                    Comprehensive audit trails
+                </li>
+                <li style="margin-bottom: 1rem; display: flex; align-items: center;">
+                    <span style="color: #10b981; margin-right: 0.5rem;">✓</span>
+                    Enterprise-grade security
+                </li>
+            </ul>
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
 
 def render_register_page() -> None:
-    render_public_topbar()
-    render_page_header('Create Account', 'Register through a separate dedicated page with profile details and password validation.', 'Public Access')
-    left, right = st.columns([1.1, 0.9])
-    with left:
+    st.markdown("""
+    <div class="header">
+        <div class="header-content">
+            <div class="logo">🛡️ PhishGuard</div>
+            <nav class="nav-links">
+                <a href="#" class="nav-link">Home</a>
+                <a href="#" class="nav-link">Features</a>
+                <a href="#" class="nav-link">About</a>
+            </nav>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown("<div class=\"page-container\">", unsafe_allow_html=True)
+    st.markdown("<div class=\"page-header\"><h1 class=\"page-title\">Create Your Account</h1><p class=\"page-subtitle\">Join our platform to start detecting phishing threats</p></div>", unsafe_allow_html=True)
+
+    col1, col2 = st.columns([1, 1])
+    with col1:
+        st.markdown("<div class=\"card\">", unsafe_allow_html=True)
+        st.markdown("<h2 class=\"card-title\">Sign Up</h2>", unsafe_allow_html=True)
+
         with st.form('register_form', clear_on_submit=True):
-            st.subheader('Create a new user account')
-            full_name = st.text_input('Full Name', placeholder='Your full name')
-            institution = st.text_input('Institution', placeholder='University or department')
-            email = st.text_input('Email Address', placeholder='student@example.com')
-            bio = st.text_area('Short Bio', placeholder='Optional short role or project description', height=90)
-            password = st.text_input('Create Password', type='password')
-            confirm_password = st.text_input('Confirm Password', type='password')
+            st.markdown("<div class=\"form-group\"><label class=\"form-label\">Full Name</label>", unsafe_allow_html=True)
+            full_name = st.text_input('', placeholder='Your full name', label_visibility='collapsed')
+            st.markdown("</div>", unsafe_allow_html=True)
+
+            st.markdown("<div class=\"form-group\"><label class=\"form-label\">Institution</label>", unsafe_allow_html=True)
+            institution = st.text_input('', placeholder='University or organization', label_visibility='collapsed')
+            st.markdown("</div>", unsafe_allow_html=True)
+
+            st.markdown("<div class=\"form-group\"><label class=\"form-label\">Email Address</label>", unsafe_allow_html=True)
+            email = st.text_input('', placeholder='your.email@example.com', label_visibility='collapsed')
+            st.markdown("</div>", unsafe_allow_html=True)
+
+            st.markdown("<div class=\"form-group\"><label class=\"form-label\">Short Bio (Optional)</label>", unsafe_allow_html=True)
+            bio = st.text_area('', placeholder='Brief description of your role', height=80, label_visibility='collapsed')
+            st.markdown("</div>", unsafe_allow_html=True)
+
+            st.markdown("<div class=\"form-group\"><label class=\"form-label\">Password</label>", unsafe_allow_html=True)
+            password = st.text_input('', type='password', placeholder='Create a strong password', label_visibility='collapsed')
+            st.markdown("</div>", unsafe_allow_html=True)
+
+            st.markdown("<div class=\"form-group\"><label class=\"form-label\">Confirm Password</label>", unsafe_allow_html=True)
+            confirm_password = st.text_input('', type='password', placeholder='Confirm your password', label_visibility='collapsed')
+            st.markdown("</div>", unsafe_allow_html=True)
+
             submitted = st.form_submit_button('Create Account', type='primary', use_container_width=True)
             if submitted:
                 ok, message, user = register_user(db, full_name, email, password, confirm_password, institution, bio)
@@ -454,22 +541,45 @@ def render_register_page() -> None:
                     st.success(message)
                     st.rerun()
                 st.error(message)
-    with right:
-        st.markdown(
-            """
-            <div class='panel-card side-note'>
-                <h3>Password guidance</h3>
-                <p>Use a strong password that includes uppercase letters, lowercase letters, numbers, and a symbol. The system stores credentials using salted password hashing.</p>
-                <hr />
-                <h3>What you get after registration</h3>
-                <p>Each account has access to message analysis, saved history, personal analytics, report exports, and profile management.</p>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-        if st.button('Already have an account?', use_container_width=True, key='go_login_from_register'):
+        st.markdown("</div>", unsafe_allow_html=True)
+
+        st.markdown("<p style=\"text-align: center; margin-top: 1rem;\">Already have an account? <a href=\"#\" onclick=\"document.querySelector('[data-testid=stButton]').click()\">Sign in here</a></p>", unsafe_allow_html=True)
+        if st.button('Sign In', key='go_login_from_register'):
             goto_public('Login')
             st.rerun()
+
+    with col2:
+        st.markdown("""
+        <div class="card">
+            <h3 class="card-title">Password Requirements</h3>
+            <ul style="list-style: none; padding: 0;">
+                <li style="margin-bottom: 0.5rem; display: flex; align-items: center;">
+                    <span style="color: #10b981; margin-right: 0.5rem;">✓</span>
+                    At least 8 characters long
+                </li>
+                <li style="margin-bottom: 0.5rem; display: flex; align-items: center;">
+                    <span style="color: #10b981; margin-right: 0.5rem;">✓</span>
+                    Include uppercase letters
+                </li>
+                <li style="margin-bottom: 0.5rem; display: flex; align-items: center;">
+                    <span style="color: #10b981; margin-right: 0.5rem;">✓</span>
+                    Include lowercase letters
+                </li>
+                <li style="margin-bottom: 0.5rem; display: flex; align-items: center;">
+                    <span style="color: #10b981; margin-right: 0.5rem;">✓</span>
+                    Include numbers
+                </li>
+                <li style="margin-bottom: 0.5rem; display: flex; align-items: center;">
+                    <span style="color: #10b981; margin-right: 0.5rem;">✓</span>
+                    Include special characters
+                </li>
+            </ul>
+            <hr style="margin: 1rem 0; border: none; border-top: 1px solid #e2e8f0;">
+            <p style="color: #64748b; font-size: 0.875rem;">Your account will be created with user privileges. Administrators can upgrade your access level if needed.</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.markdown("</div>", unsafe_allow_html=True)
 
 
 def render_dashboard(user: dict) -> None:
@@ -477,19 +587,23 @@ def render_dashboard(user: dict) -> None:
     history = db.get_history(user['id'], limit=400)
     stats_data = db.get_user_statistics(user['id'])
 
-    render_page_header('Dashboard', 'Review your recent activity, model quality, and current system state from a cleaner overview page.', 'Workspace')
+    st.markdown("<div class=\"page-container\">", unsafe_allow_html=True)
+    st.markdown("<div class=\"page-header\"><h1 class=\"page-title\">Dashboard</h1><p class=\"page-subtitle\">Welcome back! Here's your security overview and recent activity.</p></div>", unsafe_allow_html=True)
 
-    stats = st.columns(6)
-    stats[0].metric('Total Scans', stats_data['total_scans'])
-    stats[1].metric('Phishing Results', stats_data['phishing_count'])
-    stats[2].metric('Legitimate Results', stats_data['legitimate_count'])
-    stats[3].metric('High Risk Results', stats_data['high_risk_count'])
-    stats[4].metric('Average Confidence', f"{stats_data['avg_confidence']:.2%}" if stats_data['total_scans'] else 'N/A')
-    stats[5].metric('Model Accuracy', f"{metrics.get('accuracy', 0):.2%}" if metrics else 'N/A')
+    # Stats Cards
+    st.markdown("<div class=\"stats-grid\">", unsafe_allow_html=True)
+    stat_cols = st.columns(6)
+    stat_cols[0].metric('Total Scans', stats_data['total_scans'])
+    stat_cols[1].metric('Phishing Detected', stats_data['phishing_count'])
+    stat_cols[2].metric('Safe Messages', stats_data['legitimate_count'])
+    stat_cols[3].metric('High Risk Alerts', stats_data['high_risk_count'])
+    stat_cols[4].metric('Avg Confidence', f"{stats_data['avg_confidence']:.1%}" if stats_data['total_scans'] else 'N/A')
+    stat_cols[5].metric('Model Accuracy', f"{metrics.get('accuracy', 0):.1%}" if metrics else 'N/A')
+    st.markdown("</div>", unsafe_allow_html=True)
 
-    left, right = st.columns([1.25, 0.95])
-    with left:
-        st.subheader('Recent Activity Trend')
+    col1, col2 = st.columns([1.5, 1])
+    with col1:
+        st.markdown("<div class=\"card\"><h3 class=\"card-title\">Activity Timeline</h3>", unsafe_allow_html=True)
         if history:
             hist_df = pd.DataFrame(history)
             chart_df = (
@@ -499,29 +613,51 @@ def render_dashboard(user: dict) -> None:
                 .unstack(fill_value=0)
             )
             st.line_chart(chart_df)
-            st.subheader('Latest Saved Results')
-            st.dataframe(
-                hist_df[['created_at', 'predicted_name', 'risk_level', 'confidence', 'source_type']].head(12),
-                use_container_width=True,
-            )
+            st.markdown("<h4>Recent Scans</h4>", unsafe_allow_html=True)
+            display_df = hist_df[['created_at', 'predicted_name', 'risk_level', 'confidence', 'source_type']].head(12)
+            st.dataframe(display_df, use_container_width=True)
         else:
-            st.info('No saved scans yet. Use the Scan Message page or Batch Analysis page to create your first results.')
-    with right:
-        st.markdown(
-            """
-            <div class='panel-card info-card'>
-                <h4>Current stack</h4>
-                <p>Streamlit interface plus TF IDF and Logistic Regression for classification with SQLite as the persistent relational store.</p>
+            st.info('No scans yet. Start by analyzing a message!')
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    with col2:
+        st.markdown("""
+        <div class="card">
+            <h3 class="card-title">Quick Actions</h3>
+            <div style="display: flex; flex-direction: column; gap: 1rem;">
+        """, unsafe_allow_html=True)
+
+        if st.button('🔍 Scan New Message', use_container_width=True):
+            goto_app('Scan Message')
+            st.rerun()
+
+        if st.button('📊 Batch Analysis', use_container_width=True):
+            goto_app('Batch Analysis')
+            st.rerun()
+
+        if st.button('📈 View Analytics', use_container_width=True):
+            goto_app('Analytics')
+            st.rerun()
+
+        st.markdown("</div></div>", unsafe_allow_html=True)
+
+        st.markdown("""
+        <div class="card">
+            <h3 class="card-title">System Status</h3>
+            <p style="color: #64748b; margin-bottom: 1rem;">All systems operational</p>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span>AI Model</span>
+                <span style="color: #10b981;">● Active</span>
             </div>
-            <div class='panel-card info-card'>
-                <h4>Capabilities</h4>
-                <p>Single message analysis, batch processing, explainable outputs, personal history export, analytics, and administrative monitoring are all included in this build.</p>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem;">
+                <span>Database</span>
+                <span style="color: #10b981;">● Connected</span>
             </div>
-            """,
-            unsafe_allow_html=True,
-        )
-        if st.button('Train or Refresh Model', use_container_width=True):
-            with st.spinner('Training model and refreshing metrics...'):
+        </div>
+        """, unsafe_allow_html=True)
+
+        if st.button('🔄 Retrain Model', use_container_width=True):
+            with st.spinner('Retraining AI model...'):
                 _, summary = train_and_save_model()
                 db.record_training_run(summary, actor_user_id=user['id'])
                 db.log_event(
@@ -536,41 +672,51 @@ def render_dashboard(user: dict) -> None:
                 )
                 refresh_caches()
             st.success(
-                f"Training complete. Accuracy: {summary.accuracy:.2%} | F1-score: {summary.f1_score:.2%} | ROC-AUC: {summary.roc_auc:.2%}"
+                f"Model updated! Accuracy: {summary.accuracy:.1%} | F1-score: {summary.f1_score:.1%} | ROC-AUC: {summary.roc_auc:.1%}"
             )
             st.rerun()
 
+    st.markdown("</div>", unsafe_allow_html=True)
+
 
 def render_scan_page(user: dict) -> None:
-    render_page_header('Scan Message', 'Analyze one message at a time with a cleaner single-purpose page and clearer result presentation.', 'Detection')
+    st.markdown("<div class=\"page-container\">", unsafe_allow_html=True)
+    st.markdown("<div class=\"page-header\"><h1 class=\"page-title\">Message Scanner</h1><p class=\"page-subtitle\">Analyze individual messages for phishing threats with detailed AI-powered insights.</p></div>", unsafe_allow_html=True)
 
-    chosen_sample = st.selectbox('Load a sample message', ['Custom'] + list(SAMPLE_MESSAGES.keys()))
-    default_text = SAMPLE_MESSAGES.get(chosen_sample, '') if chosen_sample != 'Custom' else ''
-    user_input = st.text_area(
-        'Message or email text',
-        height=220,
-        placeholder='Paste message content here...',
+    st.markdown("<div class=\"card\">", unsafe_allow_html=True)
+    st.markdown("<h3 class=\"card-title\">Message Analysis</h3>", unsafe_allow_html=True)
+
+    chosen_sample = st.selectbox('Choose a sample message', ['Custom Message'] + list(SAMPLE_MESSAGES.keys()))
+    default_text = SAMPLE_MESSAGES.get(chosen_sample, '') if chosen_sample != 'Custom Message' else ''
+
+    message_input = st.text_area(
+        'Enter message content',
+        height=200,
+        placeholder='Paste your message or email content here for analysis...',
         value=default_text,
+        label_visibility='collapsed'
     )
-    uploaded = st.file_uploader('Optional text file upload', type=['txt'], key='single_upload')
+
+    uploaded = st.file_uploader('Or upload a text file', type=['txt'], key='single_upload')
+
     if uploaded is not None:
         try:
-            user_input = uploaded.read().decode('utf-8', errors='ignore')
-            st.text_area('Uploaded content preview', value=user_input, height=160)
+            message_input = uploaded.read().decode('utf-8', errors='ignore')
+            st.text_area('Uploaded content preview', value=message_input, height=150, disabled=True)
         except Exception:
             st.error('Could not read the uploaded file as UTF-8 text.')
 
-    action_cols = st.columns([1, 1, 3])
-    analyze = action_cols[0].button('Analyze', type='primary', use_container_width=True)
-    save_toggle = action_cols[1].checkbox('Save to history', value=True)
-    action_cols[2].caption('Reports can be downloaded after a successful scan.')
+    col1, col2, col3 = st.columns([1, 1, 2])
+    analyze = col1.button('🔍 Analyze Message', type='primary', use_container_width=True)
+    save_toggle = col2.checkbox('Save to history', value=True)
+    col3.caption('Analysis reports can be downloaded after scanning.')
 
-    if analyze:
+    if analyze and message_input.strip():
         try:
-            result = predict_text(user_input)
-            st.session_state.last_result = {'result': result, 'original_text': user_input}
+            result = predict_text(message_input)
+            st.session_state.last_result = {'result': result, 'original_text': message_input}
             if save_toggle:
-                scan_id = db.save_scan(user['id'], result, user_input, source_type='manual', source_name='message box')
+                scan_id = db.save_scan(user['id'], result, message_input, source_type='manual', source_name='message scanner')
                 db.log_event(
                     actor_user_id=user['id'],
                     action='scan_message',
@@ -579,24 +725,108 @@ def render_scan_page(user: dict) -> None:
                     description=f"User analyzed a message and received {result['predicted_name']} with {result['risk_level']} risk.",
                     severity='warning' if result['risk_level'] in {'High', 'Medium'} else 'info',
                 )
-                st.success('Result saved to your history.')
-            render_scan_result(result, user_input)
+                st.success('✅ Analysis complete and saved to your history.')
+            else:
+                st.success('✅ Analysis complete.')
+
+            # Display results in a professional card layout
+            st.markdown("<div class=\"card\" style=\"margin-top: 2rem;\">", unsafe_allow_html=True)
+            st.markdown(f"<div style=\"display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;\"><span style=\"font-size: 2rem;\">{ '🚨' if result['risk_level'] == 'High' else '⚠️' if result['risk_level'] == 'Medium' else '✅' }</span><h3 style=\"margin: 0; color: {'#ef4444' if result['risk_level'] == 'High' else '#f59e0b' if result['risk_level'] == 'Medium' else '#10b981'};\">{result['predicted_name']} - {result['risk_level']} Risk</h3></div>", unsafe_allow_html=True)
+
+            # Metrics grid
+            st.markdown("<div class=\"stats-grid\">", unsafe_allow_html=True)
+            cols = st.columns(5)
+            cols[0].metric('Confidence', f"{result['confidence']:.1%}")
+            cols[1].metric('Phishing Prob', f"{result['phishing_probability']:.1%}")
+            cols[2].metric('Safe Prob', f"{result['legitimate_probability']:.1%}")
+            cols[3].metric('Risk Score', f"{result['heuristic_risk_score']}/100")
+            cols[4].metric('Signals Found', result['signal_count'])
+            st.markdown("</div>", unsafe_allow_html=True)
+
+            st.markdown(f"<p style=\"color: #64748b; margin: 1rem 0;\"><strong>Recommendation:</strong> {result['recommendation']}</p>", unsafe_allow_html=True)
+
+            col_left, col_right = st.columns([1.2, 1])
+            with col_left:
+                st.markdown("<h4>📋 Detection Signals</h4>", unsafe_allow_html=True)
+                for detail in result['signal_details']:
+                    st.write(f"• {detail}")
+                st.markdown("<h4>🔍 Suspicious Keywords</h4>", unsafe_allow_html=True)
+                if result['suspicious_keywords']:
+                    for keyword in result['suspicious_keywords']:
+                        st.code(keyword, language=None)
+                else:
+                    st.write("None detected")
+
+            with col_right:
+                st.markdown("<h4>📊 Probability Breakdown</h4>", unsafe_allow_html=True)
+                prob_df = pd.DataFrame({
+                    'Category': ['Safe', 'Phishing'],
+                    'Probability': [result['legitimate_probability'], result['phishing_probability']]
+                })
+                st.bar_chart(prob_df.set_index('Category'))
+
+                st.markdown("<h4>🎯 Model Insights</h4>", unsafe_allow_html=True)
+                if result['ml_top_terms']:
+                    for term in result['ml_top_terms']:
+                        st.code(term, language=None)
+                else:
+                    st.write("No significant terms")
+
+                st.markdown("<h4>🔗 Detected URLs</h4>", unsafe_allow_html=True)
+                if result['detected_urls']:
+                    for url in result['detected_urls']:
+                        st.code(url, language=None)
+                else:
+                    st.write("None found")
+
+            # Download options
+            st.markdown("<hr style=\"margin: 2rem 0;\">", unsafe_allow_html=True)
+            download_cols = st.columns(2)
+            report_text = build_scan_report(result, message_input)
+            download_cols[0].download_button(
+                '📄 Download Report',
+                report_text.encode('utf-8'),
+                file_name='phishguard_scan_report.txt',
+                mime='text/plain',
+                use_container_width=True,
+            )
+            download_cols[1].download_button(
+                '📊 Download JSON',
+                json.dumps(result, indent=2).encode('utf-8'),
+                file_name='phishguard_scan_result.json',
+                mime='application/json',
+                use_container_width=True,
+            )
+
+            st.markdown("</div>", unsafe_allow_html=True)
+
         except ModelNotFoundError as exc:
-            st.error(str(exc))
+            st.error(f"❌ {str(exc)}")
         except ValueError as exc:
-            st.error(str(exc))
+            st.error(f"❌ {str(exc)}")
+    elif analyze:
+        st.warning("⚠️ Please enter a message to analyze.")
 
     elif st.session_state.last_result:
-        st.markdown('### Last Scan Result')
-        render_scan_result(st.session_state.last_result['result'], st.session_state.last_result['original_text'])
+        st.markdown("### 📋 Last Analysis Result")
+        result = st.session_state.last_result['result']
+        st.markdown(f"<div style=\"padding: 1rem; border-radius: 8px; background: {'#fef2f2' if result['risk_level'] == 'High' else '#fefce8' if result['risk_level'] == 'Medium' else '#f0fdf4'}; border: 1px solid {'#fecaca' if result['risk_level'] == 'High' else '#fde047' if result['risk_level'] == 'Medium' else '#bbf7d0'};\">", unsafe_allow_html=True)
+        st.markdown(f"<strong>{result['predicted_name']} - {result['risk_level']} Risk</strong> | Confidence: {result['confidence']:.1%}", unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    st.markdown("</div></div>", unsafe_allow_html=True)
 
 
 def render_batch_page(user: dict) -> None:
-    render_page_header('Batch Analysis', 'Upload CSV or TXT content and process multiple messages in one run from a dedicated batch workflow.', 'Detection')
+    st.markdown("<div class=\"page-container\">", unsafe_allow_html=True)
+    st.markdown("<div class=\"page-header\"><h1 class=\"page-title\">Batch Analysis</h1><p class=\"page-subtitle\">Process multiple messages simultaneously for efficient threat detection at scale.</p></div>", unsafe_allow_html=True)
 
-    uploaded = st.file_uploader('Upload batch file', type=['csv', 'txt'], key='batch_upload')
-    save_results = st.checkbox('Save all batch results to history', value=False)
-    rows_to_process = st.slider('Maximum rows to process', 5, 250, 50, step=5)
+    st.markdown("<div class=\"card\">", unsafe_allow_html=True)
+    st.markdown("<h3 class=\"card-title\">📁 File Upload & Processing</h3>", unsafe_allow_html=True)
+
+    uploaded = st.file_uploader('Upload CSV or TXT file for batch analysis', type=['csv', 'txt'], key='batch_upload')
+    save_results = st.checkbox('💾 Save all results to history', value=False)
+    rows_to_process = st.slider('📊 Maximum rows to process', 5, 250, 50, step=5, help="Limit processing for large files to avoid timeouts")
 
     texts: List[str] = []
     source_name = ''
@@ -606,40 +836,45 @@ def render_batch_page(user: dict) -> None:
         if uploaded.name.lower().endswith('.csv'):
             try:
                 df = pd.read_csv(uploaded)
+                st.success(f"✅ CSV loaded with {len(df)} rows")
+                st.markdown("<h4>📋 Data Preview</h4>", unsafe_allow_html=True)
                 st.dataframe(df.head(10), use_container_width=True)
-                column_choice = st.selectbox('Select the text column', list(df.columns))
+                column_choice = st.selectbox('🎯 Select the text column to analyze', list(df.columns))
                 if column_choice:
                     texts = [str(value) for value in df[column_choice].dropna().astype(str).tolist()[:rows_to_process]]
+                    st.info(f"📝 Ready to process {len(texts)} messages from '{column_choice}' column")
             except Exception as exc:
-                st.error(f'Could not read the CSV file: {exc}')
+                st.error(f'❌ Could not read CSV file: {exc}')
         else:
             try:
                 text_content = uploaded.read().decode('utf-8', errors='ignore')
                 texts = file_to_lines(text_content)[:rows_to_process]
-                st.text_area('TXT preview', value='\n'.join(texts[:20]), height=180)
+                st.success(f"✅ TXT file loaded with {len(texts)} messages")
+                st.markdown("<h4>📋 Content Preview</h4>", unsafe_allow_html=True)
+                st.text_area('First 20 lines preview', value='\n'.join(texts[:20]), height=150, disabled=True)
             except Exception as exc:
-                st.error(f'Could not read the TXT file: {exc}')
+                st.error(f'❌ Could not read TXT file: {exc}')
 
-    if st.button('Run Batch Analysis', type='primary', disabled=not texts, use_container_width=True):
+    if st.button('🚀 Start Batch Analysis', type='primary', disabled=not texts, use_container_width=True):
         try:
-            results = predict_many(texts)
+            with st.spinner('🔄 Analyzing messages... Please wait.'):
+                results = predict_many(texts)
             if not results:
-                st.warning('No valid text rows were found to analyze.')
+                st.warning('⚠️ No valid text rows were found to analyze.')
                 return
+
             records = []
             for original_text, result in zip(texts, results):
-                records.append(
-                    {
-                        'text': original_text,
-                        'prediction': result['predicted_name'],
-                        'confidence': round(result['confidence'], 4),
-                        'phishing_probability': round(result['phishing_probability'], 4),
-                        'risk_level': result['risk_level'],
-                        'risk_score': result['heuristic_risk_score'],
-                        'signals': '; '.join(result['signal_details']),
-                        'keywords': ', '.join(result['suspicious_keywords']),
-                    }
-                )
+                records.append({
+                    'text': original_text,
+                    'prediction': result['predicted_name'],
+                    'confidence': round(result['confidence'], 4),
+                    'phishing_probability': round(result['phishing_probability'], 4),
+                    'risk_level': result['risk_level'],
+                    'risk_score': result['heuristic_risk_score'],
+                    'signals': '; '.join(result['signal_details']),
+                    'keywords': ', '.join(result['suspicious_keywords']),
+                })
                 if save_results:
                     scan_id = db.save_scan(user['id'], result, original_text, source_type='batch', source_name=source_name)
                     db.log_event(
@@ -650,32 +885,78 @@ def render_batch_page(user: dict) -> None:
                         description=f"Batch scan saved from {source_name or 'uploaded file'} with result {result['predicted_name']}.",
                         severity='warning' if result['risk_level'] in {'High', 'Medium'} else 'info',
                     )
+
             results_df = pd.DataFrame(records)
             st.session_state.batch_results_df = results_df
-            st.success(f'Batch analysis completed for {len(results_df)} messages.')
-            st.dataframe(results_df, use_container_width=True)
-            dataframe_download_button('Download batch results as CSV', results_df, 'batch_analysis_results.csv')
+
+            # Summary stats
+            total_scans = len(results_df)
+            phishing_count = (results_df['prediction'] == 'Phishing').sum()
+            high_risk_count = (results_df['risk_level'] == 'High').sum()
+
+            st.success(f'✅ Batch analysis completed! Processed {total_scans} messages.')
+
+            # Results summary
+            st.markdown("<div class=\"stats-grid\">", unsafe_allow_html=True)
+            cols = st.columns(4)
+            cols[0].metric('Total Messages', total_scans)
+            cols[1].metric('Phishing Detected', phishing_count)
+            cols[2].metric('Safe Messages', total_scans - phishing_count)
+            cols[3].metric('High Risk Alerts', high_risk_count)
+            st.markdown("</div>", unsafe_allow_html=True)
+
+            # Results table
+            st.markdown("<h4>📊 Detailed Results</h4>", unsafe_allow_html=True)
+            display_cols = ['prediction', 'confidence', 'phishing_probability', 'risk_level', 'risk_score', 'signals']
+            st.dataframe(results_df[display_cols], use_container_width=True)
+
+            # Download options
+            download_cols = st.columns(2)
+            download_cols[0].download_button(
+                '📄 Download CSV Report',
+                results_df.to_csv(index=False).encode('utf-8'),
+                file_name='batch_analysis_results.csv',
+                mime='text/csv',
+                use_container_width=True,
+            )
+            download_cols[1].download_button(
+                '📊 Download JSON Data',
+                json.dumps(records, indent=2).encode('utf-8'),
+                file_name='batch_analysis_results.json',
+                mime='application/json',
+                use_container_width=True,
+            )
+
         except ModelNotFoundError as exc:
-            st.error(str(exc))
+            st.error(f"❌ {str(exc)}")
+        except Exception as exc:
+            st.error(f"❌ Analysis failed: {str(exc)}")
 
     if isinstance(st.session_state.batch_results_df, pd.DataFrame):
-        st.markdown('### Last Batch Run')
+        st.markdown("### 📋 Last Batch Run Results")
         st.dataframe(st.session_state.batch_results_df, use_container_width=True)
+
+    st.markdown("</div></div>", unsafe_allow_html=True)
 
 
 def render_history_page(user: dict) -> None:
-    render_page_header('Scan History', 'Search, filter, export, and manage previously saved records from a dedicated history workspace.', 'Workspace')
+    st.markdown("<div class=\"page-container\">", unsafe_allow_html=True)
+    st.markdown("<div class=\"page-header\"><h1 class=\"page-title\">Scan History</h1><p class=\"page-subtitle\">Browse, search, and manage your previously analyzed messages and results.</p></div>", unsafe_allow_html=True)
+
+    st.markdown("<div class=\"card\">", unsafe_allow_html=True)
+    st.markdown("<h3 class=\"card-title\">🔍 Search & Filter</h3>", unsafe_allow_html=True)
 
     filters = st.columns([1, 1, 1, 1, 2])
     risk_filter = filters[0].selectbox('Risk Level', ['All', 'High', 'Medium', 'Low'])
-    class_filter = filters[1].selectbox('Class', ['All', 'Phishing', 'Legitimate'])
-    max_rows = filters[2].selectbox('Rows', [25, 50, 100, 250, 500], index=2)
-    export_limit = filters[3].slider('CSV Rows', 25, MAX_HISTORY_EXPORT_ROWS, min(500, MAX_HISTORY_EXPORT_ROWS), step=25)
-    search_term = filters[4].text_input('Search', placeholder='keyword recommendation or class')
+    class_filter = filters[1].selectbox('Prediction', ['All', 'Phishing', 'Legitimate'])
+    max_rows = filters[2].selectbox('Rows to Show', [25, 50, 100, 250, 500], index=2)
+    export_limit = filters[3].slider('Export Limit', 25, MAX_HISTORY_EXPORT_ROWS, min(500, MAX_HISTORY_EXPORT_ROWS), step=25)
+    search_term = filters[4].text_input('Search', placeholder='keyword, recommendation, or class...')
 
     history = db.get_history(user['id'], limit=max_rows, risk_level=risk_filter, search=search_term, predicted_name=class_filter)
     if not history:
-        st.info('No saved scans matched the selected filters.')
+        st.info('⚠️ No scans match your current filters. Try adjusting your search criteria.')
+        st.markdown("</div></div>", unsafe_allow_html=True)
         return
 
     history_df = pd.DataFrame(history)
@@ -683,22 +964,47 @@ def render_history_page(user: dict) -> None:
         'created_at', 'predicted_name', 'risk_level', 'confidence', 'heuristic_risk_score',
         'source_type', 'source_name', 'suspicious_keywords', 'recommendation', 'user_feedback'
     ]
+
+    st.markdown("<h4>📋 Scan Results</h4>", unsafe_allow_html=True)
     st.dataframe(history_df[display_columns], use_container_width=True)
 
     export_df = pd.DataFrame(
         db.get_history(user['id'], limit=export_limit, risk_level=risk_filter, search=search_term, predicted_name=class_filter)
     )
-    dataframe_download_button('Download filtered history as CSV', export_df, 'phishguard_history.csv')
+    download_cols = st.columns(2)
+    download_cols[0].download_button(
+        '📄 Export as CSV',
+        export_df.to_csv(index=False).encode('utf-8'),
+        file_name='phishguard_history.csv',
+        mime='text/csv',
+        use_container_width=True,
+    )
+    download_cols[1].download_button(
+        '📊 Export as JSON',
+        export_df.to_json(orient='records', indent=2).encode('utf-8'),
+        file_name='phishguard_history.json',
+        mime='application/json',
+        use_container_width=True,
+    )
 
-    st.subheader('Manage individual history items')
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    # Individual Management
+    st.markdown("<div class=\"card\">", unsafe_allow_html=True)
+    st.markdown("<h3 class=\"card-title\">⚙️ Manage Individual Scans</h3>", unsafe_allow_html=True)
+
     options = {f"#{row['id']} | {row['created_at']} | {row['predicted_name']} | {row['risk_level']}": row['id'] for row in history}
-    selected_label = st.selectbox('Select a saved scan', list(options.keys()))
+    selected_label = st.selectbox('Select a scan to manage', list(options.keys()))
     selected_id = options[selected_label]
     selected_row = next(row for row in history if row['id'] == selected_id)
-    st.text_area('Saved message', value=selected_row['message_text'], height=180)
-    feedback = st.text_area('Feedback note', value=selected_row.get('user_feedback', ''), key=f'feedback_{selected_id}')
+
+    st.markdown("<h4>📝 Original Message</h4>", unsafe_allow_html=True)
+    st.text_area('Message content', value=selected_row['message_text'], height=150, disabled=True)
+
+    feedback = st.text_area('Add or update feedback', value=selected_row.get('user_feedback', ''), height=80)
+
     action_cols = st.columns(3)
-    if action_cols[0].button('Save Feedback', key=f'save_{selected_id}', use_container_width=True):
+    if action_cols[0].button('💾 Save Feedback', key=f'save_{selected_id}', use_container_width=True):
         db.update_feedback(selected_id, user['id'], feedback)
         db.log_event(
             actor_user_id=user['id'],
@@ -708,9 +1014,10 @@ def render_history_page(user: dict) -> None:
             description=f'Feedback updated for saved scan #{selected_id}.',
             severity='info',
         )
-        st.success('Feedback updated.')
+        st.success('✅ Feedback updated.')
         st.rerun()
-    if action_cols[1].button('Delete Selected', key=f'delete_{selected_id}', use_container_width=True):
+
+    if action_cols[1].button('🗑️ Delete Scan', key=f'delete_{selected_id}', use_container_width=True):
         db.delete_history_item(selected_id, user['id'])
         db.log_event(
             actor_user_id=user['id'],
@@ -720,9 +1027,10 @@ def render_history_page(user: dict) -> None:
             description=f'Saved scan #{selected_id} was deleted.',
             severity='warning',
         )
-        st.success('Selected history item deleted.')
+        st.success('✅ Selected scan deleted.')
         st.rerun()
-    if action_cols[2].button('Clear All History', key='clear_all_history', use_container_width=True):
+
+    if action_cols[2].button('🗑️ Clear All History', key='clear_all_history', use_container_width=True):
         db.clear_history(user['id'])
         db.log_event(
             actor_user_id=user['id'],
@@ -731,34 +1039,52 @@ def render_history_page(user: dict) -> None:
             description='User cleared all personal scan history.',
             severity='warning',
         )
-        st.success('All history entries were removed.')
+        st.success('✅ All history entries were removed.')
         st.rerun()
+
+    st.markdown("</div></div>", unsafe_allow_html=True)
 
 
 def render_analytics_page(user: dict) -> None:
-    render_page_header('Analytics', 'Review your saved scanning trends, confidence levels, and keyword patterns from a cleaner analytics page.', 'Workspace')
+    st.markdown("<div class=\"page-container\">", unsafe_allow_html=True)
+    st.markdown("<div class=\"page-header\"><h1 class=\"page-title\">Analytics Dashboard</h1><p class=\"page-subtitle\">Comprehensive insights into your scanning patterns, trends, and security metrics.</p></div>", unsafe_allow_html=True)
+
     history = db.get_history(user['id'], limit=1000)
     if not history:
-        st.info('Analytics will appear after you save some scan results.')
+        st.markdown("<div class=\"card\"><p style=\"text-align: center; color: #64748b; padding: 2rem;\">📊 Analytics will appear after you save some scan results. Start by analyzing messages!</p></div>", unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
         return
 
     df = pd.DataFrame(history)
-    top = st.columns(4)
-    top[0].metric('Rows Analysed', len(df))
-    top[1].metric('High Risk Rate', f"{(df['risk_level'].eq('High').mean() if len(df) else 0):.2%}")
-    top[2].metric('Phishing Rate', f"{(df['predicted_name'].eq('Phishing').mean() if len(df) else 0):.2%}")
-    top[3].metric('Average Confidence', f"{df['confidence'].mean():.2%}")
 
-    left, right = st.columns(2)
-    with left:
-        st.subheader('Risk Level Distribution')
-        st.bar_chart(df['risk_level'].value_counts())
-        st.subheader('Average Confidence by Class')
-        st.bar_chart(df.groupby('predicted_name')['confidence'].mean())
-    with right:
-        st.subheader('Average Risk Score by Class')
-        st.bar_chart(df.groupby('predicted_name')['heuristic_risk_score'].mean())
-        st.subheader('Daily Timeline')
+    # Overview Stats
+    st.markdown("<div class=\"stats-grid\">", unsafe_allow_html=True)
+    top = st.columns(4)
+    top[0].metric('Messages Analyzed', len(df))
+    top[1].metric('High Risk Rate', f"{(df['risk_level'].eq('High').mean() if len(df) else 0):.1%}")
+    top[2].metric('Phishing Detection Rate', f"{(df['predicted_name'].eq('Phishing').mean() if len(df) else 0):.1%}")
+    top[3].metric('Average Confidence', f"{df['confidence'].mean():.1%}")
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    col1, col2 = st.columns(2)
+    with col1:
+        st.markdown("<div class=\"card\"><h3 class=\"card-title\">📈 Risk Level Distribution</h3>", unsafe_allow_html=True)
+        risk_chart = df['risk_level'].value_counts()
+        st.bar_chart(risk_chart)
+        st.markdown("</div>", unsafe_allow_html=True)
+
+        st.markdown("<div class=\"card\"><h3 class=\"card-title\">📊 Average Confidence by Class</h3>", unsafe_allow_html=True)
+        confidence_by_class = df.groupby('predicted_name')['confidence'].mean()
+        st.bar_chart(confidence_by_class)
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    with col2:
+        st.markdown("<div class=\"card\"><h3 class=\"card-title\">📉 Average Risk Score by Class</h3>", unsafe_allow_html=True)
+        risk_score_by_class = df.groupby('predicted_name')['heuristic_risk_score'].mean()
+        st.bar_chart(risk_score_by_class)
+        st.markdown("</div>", unsafe_allow_html=True)
+
+        st.markdown("<div class=\"card\"><h3 class=\"card-title\">📅 Daily Activity Timeline</h3>", unsafe_allow_html=True)
         timeline = (
             df.assign(created_date=pd.to_datetime(df['created_at']).dt.date)
             .groupby(['created_date', 'risk_level'])
@@ -766,7 +1092,9 @@ def render_analytics_page(user: dict) -> None:
             .unstack(fill_value=0)
         )
         st.line_chart(timeline)
+        st.markdown("</div>", unsafe_allow_html=True)
 
+    # Suspicious Keywords Analysis
     keyword_series = (
         df['suspicious_keywords']
         .fillna('')
@@ -776,8 +1104,12 @@ def render_analytics_page(user: dict) -> None:
     )
     keyword_series = keyword_series[keyword_series.astype(bool)]
     if not keyword_series.empty:
-        st.subheader('Most Frequent Suspicious Keywords')
-        st.bar_chart(keyword_series.value_counts().head(10))
+        st.markdown("<div class=\"card\"><h3 class=\"card-title\">🔍 Most Frequent Suspicious Keywords</h3>", unsafe_allow_html=True)
+        top_keywords = keyword_series.value_counts().head(15)
+        st.bar_chart(top_keywords)
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    st.markdown("</div>", unsafe_allow_html=True)
 
 
 def render_metrics_page(user: dict) -> None:
@@ -871,19 +1203,31 @@ def render_platform_page() -> None:
 
 
 def render_account_page(user: dict) -> None:
-    render_page_header('Account', 'Manage your profile, password, and account snapshot from a dedicated account page.', 'Workspace')
-    left, right = st.columns([1, 1])
+    st.markdown("<div class=\"page-container\">", unsafe_allow_html=True)
+    st.markdown("<div class=\"page-header\"><h1 class=\"page-title\">Account Settings</h1><p class=\"page-subtitle\">Manage your profile, security settings, and account preferences.</p></div>", unsafe_allow_html=True)
 
-    with left:
-        st.subheader('Profile')
+    col1, col2 = st.columns([1, 1])
+    with col1:
+        st.markdown("<div class=\"card\">", unsafe_allow_html=True)
+        st.markdown("<h3 class=\"card-title\">👤 Profile Information</h3>", unsafe_allow_html=True)
+
         with st.form('profile_form'):
-            full_name = st.text_input('Full Name', value=user.get('full_name', ''))
-            institution = st.text_input('Institution', value=user.get('institution', ''))
-            bio = st.text_area('Bio', value=user.get('bio', ''), height=120)
-            submitted = st.form_submit_button('Save Profile', use_container_width=True)
+            st.markdown("<div class=\"form-group\"><label class=\"form-label\">Full Name</label>", unsafe_allow_html=True)
+            full_name = st.text_input('', value=user.get('full_name', ''), label_visibility='collapsed')
+            st.markdown("</div>", unsafe_allow_html=True)
+
+            st.markdown("<div class=\"form-group\"><label class=\"form-label\">Institution</label>", unsafe_allow_html=True)
+            institution = st.text_input('', value=user.get('institution', ''), label_visibility='collapsed')
+            st.markdown("</div>", unsafe_allow_html=True)
+
+            st.markdown("<div class=\"form-group\"><label class=\"form-label\">Bio</label>", unsafe_allow_html=True)
+            bio = st.text_area('', value=user.get('bio', ''), height=100, label_visibility='collapsed')
+            st.markdown("</div>", unsafe_allow_html=True)
+
+            submitted = st.form_submit_button('💾 Save Profile', use_container_width=True)
             if submitted:
                 if len(full_name.strip()) < 3:
-                    st.error('Full name must be at least 3 characters long.')
+                    st.error('❌ Full name must be at least 3 characters long.')
                 else:
                     db.update_user_profile(user['id'], full_name, institution, bio)
                     db.log_event(
@@ -894,24 +1238,36 @@ def render_account_page(user: dict) -> None:
                         description='Profile information was updated.',
                         severity='info',
                     )
-                    st.success('Profile updated successfully.')
+                    st.success('✅ Profile updated successfully.')
                     st.rerun()
+        st.markdown("</div>", unsafe_allow_html=True)
 
-    with right:
-        st.subheader('Change Password')
+    with col2:
+        st.markdown("<div class=\"card\">", unsafe_allow_html=True)
+        st.markdown("<h3 class=\"card-title\">🔐 Change Password</h3>", unsafe_allow_html=True)
+
         with st.form('password_form'):
-            current_password = st.text_input('Current Password', type='password')
-            new_password = st.text_input('New Password', type='password')
-            confirm_password = st.text_input('Confirm New Password', type='password')
-            submitted = st.form_submit_button('Update Password', use_container_width=True)
+            st.markdown("<div class=\"form-group\"><label class=\"form-label\">Current Password</label>", unsafe_allow_html=True)
+            current_password = st.text_input('', type='password', label_visibility='collapsed')
+            st.markdown("</div>", unsafe_allow_html=True)
+
+            st.markdown("<div class=\"form-group\"><label class=\"form-label\">New Password</label>", unsafe_allow_html=True)
+            new_password = st.text_input('', type='password', label_visibility='collapsed')
+            st.markdown("</div>", unsafe_allow_html=True)
+
+            st.markdown("<div class=\"form-group\"><label class=\"form-label\">Confirm New Password</label>", unsafe_allow_html=True)
+            confirm_password = st.text_input('', type='password', label_visibility='collapsed')
+            st.markdown("</div>", unsafe_allow_html=True)
+
+            submitted = st.form_submit_button('🔄 Update Password', use_container_width=True)
             if submitted:
                 password_ok, password_message = assess_password_strength(new_password)
                 if not password_ok:
-                    st.error(password_message)
+                    st.error(f'❌ {password_message}')
                 elif new_password != confirm_password:
-                    st.error('New passwords do not match.')
+                    st.error('❌ New passwords do not match.')
                 elif not db.change_password(user['id'], current_password, new_password):
-                    st.error('Current password is incorrect.')
+                    st.error('❌ Current password is incorrect.')
                 else:
                     db.log_event(
                         actor_user_id=user['id'],
@@ -921,21 +1277,36 @@ def render_account_page(user: dict) -> None:
                         description='User password was changed successfully.',
                         severity='warning',
                     )
-                    st.success('Password updated successfully.')
+                    st.success('✅ Password updated successfully.')
+        st.markdown("</div>", unsafe_allow_html=True)
 
-    st.markdown(
-        f"""
-        <div class='panel-card account-snapshot'>
-            <h3>{user['full_name']}</h3>
-            <p><strong>Email:</strong> {user['email']}</p>
-            <p><strong>Institution:</strong> {user.get('institution', '') or 'Not set'}</p>
-            <p><strong>Role:</strong> {user.get('role', 'user')}</p>
-            <p><strong>Created:</strong> {user.get('created_at', 'Unknown')}</p>
-            <p><strong>Last login:</strong> {user.get('last_login_at', 'Not available')}</p>
+    # Account Summary
+    st.markdown("<div class=\"card\">", unsafe_allow_html=True)
+    st.markdown("<h3 class=\"card-title\">📊 Account Summary</h3>", unsafe_allow_html=True)
+
+    stats_data = db.get_user_statistics(user['id'])
+    summary_cols = st.columns(4)
+    summary_cols[0].metric('Total Scans', stats_data['total_scans'])
+    summary_cols[1].metric('Phishing Found', stats_data['phishing_count'])
+    summary_cols[2].metric('High Risk Scans', stats_data['high_risk_count'])
+    summary_cols[3].metric('Account Age', f"{(pd.Timestamp.now() - pd.Timestamp(user.get('created_at', pd.Timestamp.now()))).days} days")
+
+    st.markdown(f"""
+    <div style="background: #f8fafc; padding: 1.5rem; border-radius: 8px; margin-top: 1rem;">
+        <h4 style="margin: 0 0 1rem 0; color: #0f172a;">Account Details</h4>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div><strong>Email:</strong> {user['email']}</div>
+            <div><strong>Role:</strong> {user.get('role', 'user').title()}</div>
+            <div><strong>Full Name:</strong> {user.get('full_name', 'Not set')}</div>
+            <div><strong>Institution:</strong> {user.get('institution', 'Not set')}</div>
+            <div><strong>Created:</strong> {user.get('created_at', 'Unknown')}</div>
+            <div><strong>Last Login:</strong> {user.get('last_login_at', 'Not available')}</div>
         </div>
-        """,
-        unsafe_allow_html=True,
-    )
+        {f"<div style=\"margin-top: 1rem;\"><strong>Bio:</strong> {user.get('bio', 'Not set')}</div>" if user.get('bio') else ""}
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown("</div></div>", unsafe_allow_html=True)
 
 
 def render_admin_center(user: dict) -> None:
