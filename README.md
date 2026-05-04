@@ -54,6 +54,26 @@ If the browser does not open automatically, go to:
 http://localhost:8501
 ```
 
+## Deploying
+
+### Streamlit Community Cloud
+1. Push this repository to GitHub.
+2. Open https://share.streamlit.io and connect your GitHub account.
+3. Create a new app using this repository with the `main` branch and `app.py` as the entrypoint.
+4. Streamlit Cloud will install dependencies from `requirements.txt` and run your app automatically.
+
+### Heroku
+1. Install the Heroku CLI.
+2. Log in with `heroku login`.
+3. Create a new app with `heroku create your-app-name`.
+4. Push to Heroku with `git push heroku main`.
+5. Heroku will use the included `Procfile`, `runtime.txt`, and `requirements.txt` to launch the app.
+
+### Notes for Deployment
+- The app is configured to bind to `0.0.0.0` and use the `$PORT` environment variable.
+- SQLite data persists to `storage/phishguard_ai.db`, so the deployed instance is best suited for demo and small-team use.
+- For production, consider a managed database and secure secret handling.
+
 ## Project Structure
 
 ```text
