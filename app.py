@@ -31,21 +31,17 @@ st.set_page_config(
 )
 
 css_path = Path(__file__).resolve().parent / 'app' / 'styles.css'
-template_css_path = Path(__file__).resolve().parent / 'app_template' / 'Anyar' / 'assets' / 'css' / 'main.css'
 bootstrap_css = 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css'
 bootstrap_icons = 'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css'
 
 if css_path.exists():
     st.markdown(f"<style>{css_path.read_text(encoding='utf-8')}</style>", unsafe_allow_html=True)
 
-if template_css_path.exists():
-    template_css = template_css_path.read_text(encoding='utf-8')
-    st.markdown(
-        f'<link rel="stylesheet" href="{bootstrap_css}">'
-        f'<link rel="stylesheet" href="{bootstrap_icons}">'
-        f'<style>{template_css}</style>',
-        unsafe_allow_html=True,
-    )
+st.markdown(
+    f'<link rel="stylesheet" href="{bootstrap_css}">'
+    f'<link rel="stylesheet" href="{bootstrap_icons}">',
+    unsafe_allow_html=True,
+)
 
 
 db = Database()
