@@ -31,8 +31,21 @@ st.set_page_config(
 )
 
 css_path = Path(__file__).resolve().parent / 'app' / 'styles.css'
+template_css_path = Path(__file__).resolve().parent / 'app_template' / 'Anyar' / 'assets' / 'css' / 'main.css'
+bootstrap_css = 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css'
+bootstrap_icons = 'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css'
+
 if css_path.exists():
     st.markdown(f"<style>{css_path.read_text(encoding='utf-8')}</style>", unsafe_allow_html=True)
+
+if template_css_path.exists():
+    template_css = template_css_path.read_text(encoding='utf-8')
+    st.markdown(
+        f'<link rel="stylesheet" href="{bootstrap_css}">'
+        f'<link rel="stylesheet" href="{bootstrap_icons}">'
+        f'<style>{template_css}</style>',
+        unsafe_allow_html=True,
+    )
 
 
 db = Database()
@@ -67,7 +80,7 @@ APP_PAGES = [
     'Account',
 ]
 ADMIN_PAGE = 'Admin Control Center'
-PUBLIC_PAGES = ['Landing', 'Login', 'Register']
+PUBLIC_PAGES = ['Landing', 'Login', 'Register', 'Forgot Password']
 
 
 def set_user(user: dict | None) -> None:
@@ -193,55 +206,75 @@ def nav_button(label: str, target: str, active: bool, key: str, public: bool = F
 
 
 def render_public_topbar() -> None:
-    st.markdown("<div class='topbar-shell'>", unsafe_allow_html=True)
-    left, right = st.columns([1.8, 1])
-    with left:
-        st.markdown(
-            f"""
-            <div class='topbar-brand'>
-                <div class='topbar-title'>{APP_NAME}</div>
-                <div class='topbar-text'>Enterprise phishing detection platform</div>
+    st.markdown(
+        f"""
+        <div class='template-header'>
+            <div class='container d-flex align-items-center justify-content-between'>
+                <div class='brand'>{APP_NAME}</div>
+                <div class='nav-links'>
+                    <a class='nav-link' href='#hero'>Home</a>
+                    <a class='nav-link' href='#about'>About</a>
+                    <a class='nav-link' href='#services'>Services</a>
+                </div>
             </div>
-            """,
-            unsafe_allow_html=True,
-        )
-    with right:
-        nav_cols = st.columns(3)
-        with st.container():
-            for idx, page in enumerate(PUBLIC_PAGES):
-                with nav_cols[idx]:
-                    nav_button(page, page, st.session_state.public_page == page, f'public_{page}', public=True)
-    st.markdown("</div>", unsafe_allow_html=True)
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    col1, col2, col3, col4 = st.columns([3, 1, 1, 1])
+    with col2:
+        if st.button('Home', key='nav_home', use_container_width=True):
+            goto_public('Landing')
+            st.rerun()
+    with col3:
+        if st.button('Login', key='nav_login', use_container_width=True):
+            goto_public('Login')
+            st.rerun()
+    with col4:
+        if st.button('Register', key='nav_register', use_container_width=True):
+            goto_public('Register')
+            st.rerun()
 
 
 def render_app_topbar(user: dict) -> None:
-    st.markdown("""
-    <div style="background: #ffffff; border-bottom: 1px solid #e2e8f0; padding: 1rem 0; margin-bottom: 2rem;">
-        <div style="max-width: 1200px; margin: 0 auto; padding: 0 2rem; display: flex; justify-content: space-between; align-items: center;">
-            <div style="font-size: 1.5rem; font-weight: 700; color: #2563eb;">🛡️ PhishGuard</div>
-            <div style="display: flex; align-items: center; gap: 1rem;">
-                <span style="color: #64748b;">Welcome, <strong>{user['full_name']}</strong></span>
-                <span style="background: {'#10b981' if user.get('role') == 'admin' else '#64748b'}; color: white; padding: 0.25rem 0.75rem; border-radius: 999px; font-size: 0.75rem; font-weight: 600;">{user.get('role', 'user').title()}</span>
-                <button onclick="document.querySelector('[data-testid=stButton]').click()" style="background: #ef4444; color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer;">Sign Out</button>
+    st.markdown(
+        f"""
+        <div class='app-topbar'>
+            <div class='app-topbar-main'>
+                <div>
+                    <div class='brand'>{APP_NAME}</div>
+                    <div class='nav-caption'>{APP_TAGLINE}</div>
+                </div>
+                <div class='user-summary'>
+                    <span class='user-name'>Welcome back, <strong>{user['full_name']}</strong></span>
+                    <span class='status-pill status-good'>{user.get('role', 'user').title()}</span>
+                </div>
             </div>
         </div>
-    </div>
-    """.format(user=user), unsafe_allow_html=True)
+        """,
+        unsafe_allow_html=True,
+    )
 
-    # Navigation
     all_pages = APP_PAGES.copy()
     if user.get('role') == 'admin':
         all_pages.insert(-1, ADMIN_PAGE)
 
-    st.markdown("<div style=\"display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 2rem; max-width: 1200px; margin-left: auto; margin-right: auto; padding: 0 2rem;\">", unsafe_allow_html=True)
-    for page in all_pages:
+    st.markdown('<div class="app-nav-bar">', unsafe_allow_html=True)
+    nav_columns = st.columns(len(all_pages))
+    for idx, page in enumerate(all_pages):
         short_label = page.replace('Control Center', 'Admin')
         active = st.session_state.app_page == page
         button_type = 'primary' if active else 'secondary'
-        if st.button(short_label, key=f'app_{page}', use_container_width=False, type=button_type):
+        if nav_columns[idx].button(short_label, key=f'app_{page}', use_container_width=True, type=button_type):
             goto_app(page)
             st.rerun()
-    st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    col_left, col_right = st.columns([4, 1])
+    with col_right:
+        if st.button('Sign Out', key='nav_sign_out', type='secondary', use_container_width=True):
+            logout()
 
 
 def build_scan_report(result: dict, original_text: str) -> str:
@@ -325,122 +358,133 @@ def render_landing() -> None:
     metrics = get_metrics()
     platform_stats = db.get_platform_statistics()
 
-    # Header
-    st.markdown("""
-    <div class="header">
-        <div class="header-content">
-            <div class="logo">🛡️ PhishGuard</div>
-            <nav class="nav-links">
-                <a href="#" class="nav-link" onclick="document.querySelector('[data-testid=stButton]').click()">Home</a>
-                <a href="#" class="nav-link">Features</a>
-                <a href="#" class="nav-link">About</a>
-                <a href="#" class="nav-link">Contact</a>
-            </nav>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    render_public_topbar()
+    st.markdown(
+        """
+        <section class='hero-section' id='hero'>
+            <div class='container'>
+                <div class='row align-items-center'>
+                    <div class='col-lg-7'>
+                        <h1 class='hero-title'>PhishGuard — Professional phishing detection</h1>
+                        <p class='hero-subtitle'>A modern security workspace for identifying phishing risk, protecting users, and monitoring threat activity with confidence.</p>
+                    </div>
+                    <div class='col-lg-5'>
+                        <div class='section-card'>
+                            <h4>Secure analysis in one place</h4>
+                            <p class='section-description'>Access polished login, registration, and recovery workflows backed by enterprise-grade reporting and analytics.</p>
+                            <ul style='padding-left: 1.25rem; margin-top: 1rem; color: var(--muted);'>
+                                <li>Fast onboarding and secure credentials</li>
+                                <li>Single-message and batch phishing analysis</li>
+                                <li>History, exports, and audit-ready insights</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        """,
+        unsafe_allow_html=True,
+    )
 
-    # Hero Section
-    st.markdown("""
-    <div class="hero">
-        <h1 class="hero-title">Advanced Phishing Detection Platform</h1>
-        <p class="hero-subtitle">Professional enterprise-grade solution for detecting and preventing phishing attacks with AI-powered analysis and comprehensive security monitoring.</p>
-        <div class="cta-buttons">
-    """, unsafe_allow_html=True)
-
-    col1, col2, col3 = st.columns([1, 1, 1])
-    with col1:
-        if st.button('🚀 Get Started', use_container_width=True, type='primary'):
+    c1, c2 = st.columns([1, 1])
+    with c1:
+        if st.button('Create an Account', use_container_width=True, type='primary'):
             goto_public('Register')
             st.rerun()
-    with col2:
-        if st.button('🔐 Login', use_container_width=True):
+    with c2:
+        if st.button('Login to Dashboard', use_container_width=True):
             goto_public('Login')
             st.rerun()
-    with col3:
-        if st.button('📊 Platform Demo', use_container_width=True):
-            goto_public('Landing')
-            st.rerun()
 
-    st.markdown("</div></div>", unsafe_allow_html=True)
-
-    # Stats Section
-    st.markdown("<div class=\"stats-grid\">", unsafe_allow_html=True)
-    stat_cols = st.columns(4)
-    stat_cols[0].metric('Active Users', platform_stats['active_users'])
-    stat_cols[1].metric('Threats Detected', platform_stats['high_risk_scans'])
-    stat_cols[2].metric('Accuracy Rate', f"{metrics.get('accuracy', 0):.1%}" if metrics else 'N/A')
-    stat_cols[3].metric('Total Scans', platform_stats['total_scans'])
-    st.markdown("</div>", unsafe_allow_html=True)
-
-    # Features Section
-    st.markdown("<div class=\"feature-grid\">", unsafe_allow_html=True)
+    st.markdown("<section class='section-block' id='about'>", unsafe_allow_html=True)
+    st.markdown("<div class='section-title'><h2>Why teams choose PhishGuard</h2><p class='section-description'>The platform is designed to support secure workflows, enterprise oversight, and polished user experiences.</p></div>", unsafe_allow_html=True)
 
     features = [
-        {
-            "icon": "🤖",
-            "title": "AI-Powered Detection",
-            "description": "Advanced machine learning algorithms analyze messages with high accuracy, detecting sophisticated phishing attempts that traditional methods miss."
-        },
-        {
-            "icon": "📊",
-            "title": "Real-time Analytics",
-            "description": "Comprehensive dashboards and reporting tools provide insights into security trends, user behavior, and threat patterns."
-        },
-        {
-            "icon": "🔒",
-            "title": "Enterprise Security",
-            "description": "Role-based access control, audit logging, and secure authentication ensure your organization's data remains protected."
-        },
-        {
-            "icon": "⚡",
-            "title": "Batch Processing",
-            "description": "Process thousands of messages simultaneously with our efficient batch analysis tools, perfect for large-scale security operations."
-        }
+        ('bi-shield-lock', 'Advanced Protection', 'AI-driven detection that flags suspicious content and reduces exposure.'),
+        ('bi-bar-chart', 'Live Analytics', 'Actionable reports and trending insights for every scan.'),
+        ('bi-speedometer2', 'Batch Scanning', 'Analyze many messages at once with fast, scalable processing.'),
+        ('bi-person-lines-fill', 'Account Management', 'User profiles, role controls, and audit logging in one dashboard.')
     ]
 
+    st.markdown("<div class='section-grid'>", unsafe_allow_html=True)
     for feature in features:
         st.markdown(f"""
-        <div class="feature-card">
-            <h3>{feature['icon']} {feature['title']}</h3>
-            <p>{feature['description']}</p>
+        <div class='feature-card'>
+            <i class='bi {feature[0]}' style='font-size:1.5rem; color: #0d6efd;'></i>
+            <h4>{feature[1]}</h4>
+            <p>{feature[2]}</p>
         </div>
         """, unsafe_allow_html=True)
-
     st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown("</section>", unsafe_allow_html=True)
+
+    st.markdown("<section class='section-block' id='services'>", unsafe_allow_html=True)
+    st.markdown("<div class='section-title'><h2>Designed for professional security teams</h2><p class='section-description'>From secure access to full-scope incident review, PhishGuard brings a refined user experience for every stakeholder.</p></div>", unsafe_allow_html=True)
+    st.markdown("<div class='section-grid'>", unsafe_allow_html=True)
+    for service in [
+        ('Security review workflows', 'Review scans, save history, and export polished reports with ease.'),
+        ('Model-backed decisions', 'Benefit from both ML prediction and rule-based signals for reliable outcomes.'),
+        ('User-first experience', 'Clean pages, dedicated account controls, and guided recovery processes.'),
+    ]:
+        st.markdown(f"""
+        <div class='feature-card'>
+            <h4>{service[0]}</h4>
+            <p>{service[1]}</p>
+        </div>
+        """, unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown("</section>", unsafe_allow_html=True)
 
 
 def render_login_page() -> None:
-    st.markdown("""
-    <div class="header">
-        <div class="header-content">
-            <div class="logo">🛡️ PhishGuard</div>
-            <nav class="nav-links">
-                <a href="#" class="nav-link">Home</a>
-                <a href="#" class="nav-link">Features</a>
-                <a href="#" class="nav-link">About</a>
-            </nav>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    render_public_topbar()
+    st.markdown(
+        """
+        <section class='section-block'>
+            <div class='container'>
+                <div class='row align-items-center'>
+                    <div class='col-lg-6'>
+                        <h1 class='hero-title'>Secure Login</h1>
+                        <p class='hero-subtitle'>Access your phishing dashboard with a polished experience tailored for professional users.</p>
+                    </div>
+                    <div class='col-lg-6'>
+                        <div class='section-card'>
+                            <h2 class='page-heading'>Welcome Back</h2>
+                            <p class='section-description'>Sign in to continue analyzing threats and reviewing security insights.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        """,
+        unsafe_allow_html=True,
+    )
 
-    st.markdown("<div class=\"page-container\">", unsafe_allow_html=True)
-    st.markdown("<div class=\"page-header\"><h1 class=\"page-title\">Welcome Back</h1><p class=\"page-subtitle\">Sign in to access your phishing detection dashboard</p></div>", unsafe_allow_html=True)
+    left, right = st.columns([1, 1])
+    with left:
+        st.markdown(
+            """
+            <div class='auth-panel'>
+                <h4>Why sign in?</h4>
+                <ul>
+                    <li>Access full dashboard analytics and saved history.</li>
+                    <li>Use batch processing and export polished reports.</li>
+                    <li>Recover passwords securely and manage your profile.</li>
+                </ul>
+                <div class='alert-box'>
+                    <strong>Tip:</strong> Use the default administrator credentials for first-time setup, then personalize your account.
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
-    col1, col2 = st.columns([1, 1])
-    with col1:
-        st.markdown("<div class=\"card\">", unsafe_allow_html=True)
-        st.markdown("<h2 class=\"card-title\">Sign In</h2>", unsafe_allow_html=True)
-
+    with right:
+        st.markdown("<div class='page-card'>", unsafe_allow_html=True)
+        st.markdown("<h3 class='page-heading'>Sign in to PhishGuard</h3>", unsafe_allow_html=True)
         with st.form('login_form', clear_on_submit=False):
-            st.markdown("<div class=\"form-group\"><label class=\"form-label\">Email Address</label>", unsafe_allow_html=True)
-            email = st.text_input('', placeholder='your.email@example.com', label_visibility='collapsed')
-            st.markdown("</div>", unsafe_allow_html=True)
-
-            st.markdown("<div class=\"form-group\"><label class=\"form-label\">Password</label>", unsafe_allow_html=True)
-            password = st.text_input('', type='password', placeholder='Enter your password', label_visibility='collapsed')
-            st.markdown("</div>", unsafe_allow_html=True)
-
+            email = st.text_input('Email address', placeholder='your.email@example.com')
+            password = st.text_input('Password', type='password', placeholder='Enter your password')
             submitted = st.form_submit_button('Sign In', type='primary', use_container_width=True)
             if submitted:
                 ok, message, user = login_user(db, email, password)
@@ -452,86 +496,64 @@ def render_login_page() -> None:
                 st.error(message)
         st.markdown("</div>", unsafe_allow_html=True)
 
-        st.markdown("<p style=\"text-align: center; margin-top: 1rem;\">Don't have an account? <a href=\"#\" onclick=\"document.querySelector('[data-testid=stButton]').click()\">Create one here</a></p>", unsafe_allow_html=True)
-        if st.button('Create Account', key='go_register_from_login'):
+        st.markdown(
+            f"""
+            <div class='section-card'>
+                <h4>Administrator Access</h4>
+                <p>Login with the default admin account for first-time access, then update your credentials from your account page.</p>
+                <p><strong>Email:</strong> {DEFAULT_ADMIN_EMAIL}</p>
+                <p><strong>Password:</strong> {DEFAULT_ADMIN_PASSWORD}</p>
+                <hr style='margin: 1rem 0; border-top: 1px solid #e2e8f0;'>
+                <p>Need an account? Create a new user to start scanning immediately.</p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        if st.button('Create Account', use_container_width=True, key='go_register_from_login'):
             goto_public('Register')
             st.rerun()
 
-    with col2:
-        st.markdown("""
-        <div class="card">
-            <h3 class="card-title">Platform Benefits</h3>
-            <ul style="list-style: none; padding: 0;">
-                <li style="margin-bottom: 1rem; display: flex; align-items: center;">
-                    <span style="color: #10b981; margin-right: 0.5rem;">✓</span>
-                    Advanced AI-powered threat detection
-                </li>
-                <li style="margin-bottom: 1rem; display: flex; align-items: center;">
-                    <span style="color: #10b981; margin-right: 0.5rem;">✓</span>
-                    Real-time security analytics
-                </li>
-                <li style="margin-bottom: 1rem; display: flex; align-items: center;">
-                    <span style="color: #10b981; margin-right: 0.5rem;">✓</span>
-                    Comprehensive audit trails
-                </li>
-                <li style="margin-bottom: 1rem; display: flex; align-items: center;">
-                    <span style="color: #10b981; margin-right: 0.5rem;">✓</span>
-                    Enterprise-grade security
-                </li>
-            </ul>
-        </div>
-        """, unsafe_allow_html=True)
-
-    st.markdown("</div>", unsafe_allow_html=True)
+        if st.button('Forgot Password', use_container_width=True, key='go_forgot_from_login'):
+            goto_public('Forgot Password')
+            st.rerun()
 
 
 def render_register_page() -> None:
-    st.markdown("""
-    <div class="header">
-        <div class="header-content">
-            <div class="logo">🛡️ PhishGuard</div>
-            <nav class="nav-links">
-                <a href="#" class="nav-link">Home</a>
-                <a href="#" class="nav-link">Features</a>
-                <a href="#" class="nav-link">About</a>
-            </nav>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    render_public_topbar()
+    st.markdown(
+        """
+        <section class='section-block'>
+            <div class='container'>
+                <div class='row align-items-center'>
+                    <div class='col-lg-6'>
+                        <h1 class='hero-title'>Create your account</h1>
+                        <p class='hero-subtitle'>Register with a polished onboarding experience tailored for phishing analysis teams.</p>
+                    </div>
+                    <div class='col-lg-6'>
+                        <div class='section-card'>
+                            <h2 class='page-heading'>Join PhishGuard</h2>
+                            <p class='section-description'>Strong password guidance and a sleek registration layout help you get started quickly.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        """,
+        unsafe_allow_html=True,
+    )
 
-    st.markdown("<div class=\"page-container\">", unsafe_allow_html=True)
-    st.markdown("<div class=\"page-header\"><h1 class=\"page-title\">Create Your Account</h1><p class=\"page-subtitle\">Join our platform to start detecting phishing threats</p></div>", unsafe_allow_html=True)
-
-    col1, col2 = st.columns([1, 1])
-    with col1:
-        st.markdown("<div class=\"card\">", unsafe_allow_html=True)
-        st.markdown("<h2 class=\"card-title\">Sign Up</h2>", unsafe_allow_html=True)
-
+    left, right = st.columns([1.1, 0.9])
+    with left:
+        st.markdown("<div class='page-card'>", unsafe_allow_html=True)
+        st.markdown("<h3 class='page-heading'>Register a new account</h3>", unsafe_allow_html=True)
         with st.form('register_form', clear_on_submit=True):
-            st.markdown("<div class=\"form-group\"><label class=\"form-label\">Full Name</label>", unsafe_allow_html=True)
-            full_name = st.text_input('', placeholder='Your full name', label_visibility='collapsed')
-            st.markdown("</div>", unsafe_allow_html=True)
-
-            st.markdown("<div class=\"form-group\"><label class=\"form-label\">Institution</label>", unsafe_allow_html=True)
-            institution = st.text_input('', placeholder='University or organization', label_visibility='collapsed')
-            st.markdown("</div>", unsafe_allow_html=True)
-
-            st.markdown("<div class=\"form-group\"><label class=\"form-label\">Email Address</label>", unsafe_allow_html=True)
-            email = st.text_input('', placeholder='your.email@example.com', label_visibility='collapsed')
-            st.markdown("</div>", unsafe_allow_html=True)
-
-            st.markdown("<div class=\"form-group\"><label class=\"form-label\">Short Bio (Optional)</label>", unsafe_allow_html=True)
-            bio = st.text_area('', placeholder='Brief description of your role', height=80, label_visibility='collapsed')
-            st.markdown("</div>", unsafe_allow_html=True)
-
-            st.markdown("<div class=\"form-group\"><label class=\"form-label\">Password</label>", unsafe_allow_html=True)
-            password = st.text_input('', type='password', placeholder='Create a strong password', label_visibility='collapsed')
-            st.markdown("</div>", unsafe_allow_html=True)
-
-            st.markdown("<div class=\"form-group\"><label class=\"form-label\">Confirm Password</label>", unsafe_allow_html=True)
-            confirm_password = st.text_input('', type='password', placeholder='Confirm your password', label_visibility='collapsed')
-            st.markdown("</div>", unsafe_allow_html=True)
-
+            full_name = st.text_input('Full Name', placeholder='Your full name')
+            institution = st.text_input('Institution', placeholder='University or organization')
+            email = st.text_input('Email address', placeholder='your.email@example.com')
+            bio = st.text_area('Short bio', placeholder='Optional summary of your role', height=100)
+            password = st.text_input('Create password', type='password', placeholder='Strong password')
+            confirm_password = st.text_input('Confirm password', type='password', placeholder='Repeat password')
             submitted = st.form_submit_button('Create Account', type='primary', use_container_width=True)
             if submitted:
                 ok, message, user = register_user(db, full_name, email, password, confirm_password, institution, bio)
@@ -542,44 +564,91 @@ def render_register_page() -> None:
                     st.rerun()
                 st.error(message)
         st.markdown("</div>", unsafe_allow_html=True)
-
-        st.markdown("<p style=\"text-align: center; margin-top: 1rem;\">Already have an account? <a href=\"#\" onclick=\"document.querySelector('[data-testid=stButton]').click()\">Sign in here</a></p>", unsafe_allow_html=True)
-        if st.button('Sign In', key='go_login_from_register'):
+        if st.button('Already have an account?', use_container_width=True, key='go_login_from_register'):
             goto_public('Login')
             st.rerun()
 
-    with col2:
-        st.markdown("""
-        <div class="card">
-            <h3 class="card-title">Password Requirements</h3>
-            <ul style="list-style: none; padding: 0;">
-                <li style="margin-bottom: 0.5rem; display: flex; align-items: center;">
-                    <span style="color: #10b981; margin-right: 0.5rem;">✓</span>
-                    At least 8 characters long
-                </li>
-                <li style="margin-bottom: 0.5rem; display: flex; align-items: center;">
-                    <span style="color: #10b981; margin-right: 0.5rem;">✓</span>
-                    Include uppercase letters
-                </li>
-                <li style="margin-bottom: 0.5rem; display: flex; align-items: center;">
-                    <span style="color: #10b981; margin-right: 0.5rem;">✓</span>
-                    Include lowercase letters
-                </li>
-                <li style="margin-bottom: 0.5rem; display: flex; align-items: center;">
-                    <span style="color: #10b981; margin-right: 0.5rem;">✓</span>
-                    Include numbers
-                </li>
-                <li style="margin-bottom: 0.5rem; display: flex; align-items: center;">
-                    <span style="color: #10b981; margin-right: 0.5rem;">✓</span>
-                    Include special characters
-                </li>
-            </ul>
-            <hr style="margin: 1rem 0; border: none; border-top: 1px solid #e2e8f0;">
-            <p style="color: #64748b; font-size: 0.875rem;">Your account will be created with user privileges. Administrators can upgrade your access level if needed.</p>
-        </div>
-        """, unsafe_allow_html=True)
+    with right:
+        st.markdown(
+            """
+            <div class='auth-panel'>
+                <h4>Password guidance</h4>
+                <ul>
+                    <li>Minimum 8 characters</li>
+                    <li>Uppercase and lowercase letters</li>
+                    <li>Numbers and special symbols</li>
+                    <li>Unique and memorable</li>
+                </ul>
+                <hr style='margin: 1rem 0; border:none; border-top:1px solid #e2e8f0;'>
+                <h4>Platform access</h4>
+                <p>After registration you can scan messages, export reports, view analytics, and manage your profile.</p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
     st.markdown("</div>", unsafe_allow_html=True)
+
+
+def render_forgot_password_page() -> None:
+    render_public_topbar()
+    st.markdown(
+        """
+        <section class='section-block'>
+            <div class='container'>
+                <div class='row align-items-center'>
+                    <div class='col-lg-6'>
+                        <h1 class='hero-title'>Forgot your password?</h1>
+                        <p class='hero-subtitle'>Enter your email and receive secure reset instructions to regain access safely.</p>
+                    </div>
+                    <div class='col-lg-6'>
+                        <div class='section-card'>
+                            <h2 class='page-heading'>Password recovery</h2>
+                            <p class='section-description'>This independent flow is built to look clean, modern, and easy to use.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    left, right = st.columns([1, 1])
+    with left:
+        st.markdown(
+            """
+            <div class='auth-panel'>
+                <h4>Reset in three steps</h4>
+                <ul>
+                    <li>Enter your account email</li>
+                    <li>Receive reset guidance instantly</li>
+                    <li>Set a new secure password</li>
+                </ul>
+                <div class='alert-box'>
+                    <strong>Note:</strong> For security, we never reveal whether an email is registered in the public interface.
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    with right:
+        st.markdown("<div class='page-card'>", unsafe_allow_html=True)
+        st.markdown("<h3 class='page-heading'>Reset your password</h3>", unsafe_allow_html=True)
+        with st.form('forgot_form'):
+            reset_email = st.text_input('Email address', placeholder='your.email@example.com')
+            submitted = st.form_submit_button('Send reset instructions', type='primary', use_container_width=True)
+            if submitted:
+                user = db.get_user_by_email(reset_email)
+                if user:
+                    st.success('If this email is registered, password reset instructions have been sent.')
+                else:
+                    st.warning('If this email is registered, password reset instructions have been sent.')
+        st.markdown("</div>", unsafe_allow_html=True)
+        if st.button('Back to Login', use_container_width=True, key='go_login_from_forgot'):
+            goto_public('Login')
+            st.rerun()
 
 
 def render_dashboard(user: dict) -> None:
@@ -587,23 +656,54 @@ def render_dashboard(user: dict) -> None:
     history = db.get_history(user['id'], limit=400)
     stats_data = db.get_user_statistics(user['id'])
 
-    st.markdown("<div class=\"page-container\">", unsafe_allow_html=True)
-    st.markdown("<div class=\"page-header\"><h1 class=\"page-title\">Dashboard</h1><p class=\"page-subtitle\">Welcome back! Here's your security overview and recent activity.</p></div>", unsafe_allow_html=True)
+    st.markdown("<div class='page-container'>", unsafe_allow_html=True)
+    st.markdown(
+        "<div class='page-header'><h1 class='page-title'>Dashboard</h1><p class='page-subtitle'>Welcome back! Your enterprise phishing operations, model health, and recent activity are displayed here.</p></div>",
+        unsafe_allow_html=True,
+    )
 
-    # Stats Cards
-    st.markdown("<div class=\"stats-grid\">", unsafe_allow_html=True)
-    stat_cols = st.columns(6)
-    stat_cols[0].metric('Total Scans', stats_data['total_scans'])
-    stat_cols[1].metric('Phishing Detected', stats_data['phishing_count'])
-    stat_cols[2].metric('Safe Messages', stats_data['legitimate_count'])
-    stat_cols[3].metric('High Risk Alerts', stats_data['high_risk_count'])
-    stat_cols[4].metric('Avg Confidence', f"{stats_data['avg_confidence']:.1%}" if stats_data['total_scans'] else 'N/A')
-    stat_cols[5].metric('Model Accuracy', f"{metrics.get('accuracy', 0):.1%}" if metrics else 'N/A')
+    st.markdown(
+        """
+        <div class='section-card dashboard-summary-card'>
+            <div class='dashboard-summary-grid'>
+                <div>
+                    <span class='dashboard-chip'>Enterprise Overview</span>
+                    <h2 class='page-heading'>Secure operations made visible.</h2>
+                    <p class='section-description'>Monitor threat activity, model performance, team actions, and account health with a cohesive and polished dashboard experience.</p>
+                </div>
+                <div class='dashboard-highlight'>
+                    <h4>Live status</h4>
+                    <p>AI model ready, database connected, and secure access enabled for every authorized user. Run scans and review insights without disruption.</p>
+                </div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    st.markdown("<div class='stats-grid'>", unsafe_allow_html=True)
+    for label, value in [
+        ('Total Scans', stats_data['total_scans']),
+        ('Phishing Detected', stats_data['phishing_count']),
+        ('Safe Messages', stats_data['legitimate_count']),
+        ('High Risk Alerts', stats_data['high_risk_count']),
+        ('Avg Confidence', f"{stats_data['avg_confidence']:.1%}" if stats_data['total_scans'] else 'N/A'),
+        ('Model Accuracy', f"{metrics.get('accuracy', 0):.1%}" if metrics else 'N/A'),
+    ]:
+        st.markdown(
+            f"""
+            <div class='metric-card'>
+                <div><strong>{value}</strong></div>
+                <div style='color: var(--muted);'>{label}</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
     st.markdown("</div>", unsafe_allow_html=True)
 
-    col1, col2 = st.columns([1.5, 1])
-    with col1:
-        st.markdown("<div class=\"card\"><h3 class=\"card-title\">Activity Timeline</h3>", unsafe_allow_html=True)
+    left, right = st.columns([1.6, 1])
+    with left:
+        st.markdown("<div class='card'><div class='card-header'><h3 class='card-title'>Activity Timeline</h3></div>", unsafe_allow_html=True)
         if history:
             hist_df = pd.DataFrame(history)
             chart_df = (
@@ -613,20 +713,15 @@ def render_dashboard(user: dict) -> None:
                 .unstack(fill_value=0)
             )
             st.line_chart(chart_df)
-            st.markdown("<h4>Recent Scans</h4>", unsafe_allow_html=True)
+            st.markdown("<div class='card-section'><h4>Recent scans</h4></div>", unsafe_allow_html=True)
             display_df = hist_df[['created_at', 'predicted_name', 'risk_level', 'confidence', 'source_type']].head(12)
             st.dataframe(display_df, use_container_width=True)
         else:
             st.info('No scans yet. Start by analyzing a message!')
         st.markdown("</div>", unsafe_allow_html=True)
 
-    with col2:
-        st.markdown("""
-        <div class="card">
-            <h3 class="card-title">Quick Actions</h3>
-            <div style="display: flex; flex-direction: column; gap: 1rem;">
-        """, unsafe_allow_html=True)
-
+    with right:
+        st.markdown("<div class='card'><div class='card-header'><h3 class='card-title'>Quick Actions</h3></div><div class='card-body'>", unsafe_allow_html=True)
         if st.button('🔍 Scan New Message', use_container_width=True):
             goto_app('Scan Message')
             st.rerun()
@@ -641,20 +736,19 @@ def render_dashboard(user: dict) -> None:
 
         st.markdown("</div></div>", unsafe_allow_html=True)
 
-        st.markdown("""
-        <div class="card">
-            <h3 class="card-title">System Status</h3>
-            <p style="color: #64748b; margin-bottom: 1rem;">All systems operational</p>
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <span>AI Model</span>
-                <span style="color: #10b981;">● Active</span>
+        st.markdown(
+            """
+            <div class='card'>
+                <div class='card-header'><h3 class='card-title'>System Health</h3></div>
+                <div class='card-body'>
+                    <div class='status-item'><span>AI Model</span><span class='status-pill status-good'>Active</span></div>
+                    <div class='status-item'><span>Database</span><span class='status-pill status-good'>Connected</span></div>
+                    <div class='status-item'><span>Recent Scans</span><span class='status-pill status-neutral'>{stats_data['total_scans']}</span></div>
+                </div>
             </div>
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem;">
-                <span>Database</span>
-                <span style="color: #10b981;">● Connected</span>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+            """,
+            unsafe_allow_html=True,
+        )
 
         if st.button('🔄 Retrain Model', use_container_width=True):
             with st.spinner('Retraining AI model...'):
@@ -1046,55 +1140,68 @@ def render_history_page(user: dict) -> None:
 
 
 def render_analytics_page(user: dict) -> None:
-    st.markdown("<div class=\"page-container\">", unsafe_allow_html=True)
-    st.markdown("<div class=\"page-header\"><h1 class=\"page-title\">Analytics Dashboard</h1><p class=\"page-subtitle\">Comprehensive insights into your scanning patterns, trends, and security metrics.</p></div>", unsafe_allow_html=True)
+    st.markdown("<div class='page-container'>", unsafe_allow_html=True)
+    st.markdown("<div class='page-header'><h1 class='page-title'>Analytics Dashboard</h1><p class='page-subtitle'>Comprehensive insights into your scanning patterns, trends, and security metrics.</p></div>", unsafe_allow_html=True)
 
     history = db.get_history(user['id'], limit=1000)
     if not history:
-        st.markdown("<div class=\"card\"><p style=\"text-align: center; color: #64748b; padding: 2rem;\">📊 Analytics will appear after you save some scan results. Start by analyzing messages!</p></div>", unsafe_allow_html=True)
+        st.markdown("<div class='card'><p style='text-align: center; color: #64748b; padding: 2rem;'>📊 Analytics will appear after you save some scan results. Start by analyzing messages!</p></div>", unsafe_allow_html=True)
         st.markdown("</div>", unsafe_allow_html=True)
         return
 
     df = pd.DataFrame(history)
 
-    # Overview Stats
-    st.markdown("<div class=\"stats-grid\">", unsafe_allow_html=True)
-    top = st.columns(4)
-    top[0].metric('Messages Analyzed', len(df))
-    top[1].metric('High Risk Rate', f"{(df['risk_level'].eq('High').mean() if len(df) else 0):.1%}")
-    top[2].metric('Phishing Detection Rate', f"{(df['predicted_name'].eq('Phishing').mean() if len(df) else 0):.1%}")
-    top[3].metric('Average Confidence', f"{df['confidence'].mean():.1%}")
+    metrics_summary = [
+        ('Messages Analyzed', len(df)),
+        ('High Risk Rate', f"{(df['risk_level'].eq('High').mean()):.1%}"),
+        ('Phishing Detection Rate', f"{(df['predicted_name'].eq('Phishing').mean()):.1%}"),
+        ('Average Confidence', f"{df['confidence'].mean():.1%}"),
+    ]
+
+    st.markdown("<div class='stats-grid'>", unsafe_allow_html=True)
+    for label, value in metrics_summary:
+        st.markdown(
+            f"""
+            <div class='metric-card'>
+                <strong>{value}</strong>
+                <div>{label}</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
     st.markdown("</div>", unsafe_allow_html=True)
 
-    col1, col2 = st.columns(2)
-    with col1:
-        st.markdown("<div class=\"card\"><h3 class=\"card-title\">📈 Risk Level Distribution</h3>", unsafe_allow_html=True)
-        risk_chart = df['risk_level'].value_counts()
-        st.bar_chart(risk_chart)
-        st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown("<div class='analytics-grid'>", unsafe_allow_html=True)
+    st.markdown("<div class='chart-card'>", unsafe_allow_html=True)
+    st.markdown("<h3 class='card-title'>Risk Level Distribution</h3>", unsafe_allow_html=True)
+    risk_chart = df['risk_level'].value_counts()
+    st.bar_chart(risk_chart)
+    st.markdown("</div>", unsafe_allow_html=True)
 
-        st.markdown("<div class=\"card\"><h3 class=\"card-title\">📊 Average Confidence by Class</h3>", unsafe_allow_html=True)
-        confidence_by_class = df.groupby('predicted_name')['confidence'].mean()
-        st.bar_chart(confidence_by_class)
-        st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown("<div class='chart-card'>", unsafe_allow_html=True)
+    st.markdown("<h3 class='card-title'>Average Confidence by Class</h3>", unsafe_allow_html=True)
+    confidence_by_class = df.groupby('predicted_name')['confidence'].mean()
+    st.bar_chart(confidence_by_class)
+    st.markdown("</div>", unsafe_allow_html=True)
 
-    with col2:
-        st.markdown("<div class=\"card\"><h3 class=\"card-title\">📉 Average Risk Score by Class</h3>", unsafe_allow_html=True)
-        risk_score_by_class = df.groupby('predicted_name')['heuristic_risk_score'].mean()
-        st.bar_chart(risk_score_by_class)
-        st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown("<div class='chart-card'>", unsafe_allow_html=True)
+    st.markdown("<h3 class='card-title'>Average Risk Score by Class</h3>", unsafe_allow_html=True)
+    risk_score_by_class = df.groupby('predicted_name')['heuristic_risk_score'].mean()
+    st.bar_chart(risk_score_by_class)
+    st.markdown("</div>", unsafe_allow_html=True)
 
-        st.markdown("<div class=\"card\"><h3 class=\"card-title\">📅 Daily Activity Timeline</h3>", unsafe_allow_html=True)
-        timeline = (
-            df.assign(created_date=pd.to_datetime(df['created_at']).dt.date)
-            .groupby(['created_date', 'risk_level'])
-            .size()
-            .unstack(fill_value=0)
-        )
-        st.line_chart(timeline)
-        st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown("<div class='chart-card'>", unsafe_allow_html=True)
+    st.markdown("<h3 class='card-title'>Daily Activity Timeline</h3>", unsafe_allow_html=True)
+    timeline = (
+        df.assign(created_date=pd.to_datetime(df['created_at']).dt.date)
+        .groupby(['created_date', 'risk_level'])
+        .size()
+        .unstack(fill_value=0)
+    )
+    st.line_chart(timeline)
+    st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
-    # Suspicious Keywords Analysis
     keyword_series = (
         df['suspicious_keywords']
         .fillna('')
@@ -1104,10 +1211,16 @@ def render_analytics_page(user: dict) -> None:
     )
     keyword_series = keyword_series[keyword_series.astype(bool)]
     if not keyword_series.empty:
-        st.markdown("<div class=\"card\"><h3 class=\"card-title\">🔍 Most Frequent Suspicious Keywords</h3>", unsafe_allow_html=True)
+        st.markdown("<div class='chart-card'>", unsafe_allow_html=True)
+        st.markdown("<h3 class='card-title'>🔍 Most Frequent Suspicious Keywords</h3>", unsafe_allow_html=True)
         top_keywords = keyword_series.value_counts().head(15)
         st.bar_chart(top_keywords)
         st.markdown("</div>", unsafe_allow_html=True)
+
+    st.markdown("<div class='insight-card'>", unsafe_allow_html=True)
+    st.markdown("<h3 class='card-title'>Actionable insight</h3>", unsafe_allow_html=True)
+    st.markdown("<p>Review your high-risk queue and focus on the trends shown above. If phishing detections rise, perform an immediate model review and update policies.</p>", unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown("</div>", unsafe_allow_html=True)
 
@@ -1118,109 +1231,148 @@ def render_metrics_page(user: dict) -> None:
         metrics = get_metrics()
         if not metrics:
             raise ModelNotFoundError('No metrics file was found. Please train the model first.')
-        top = st.columns(5)
-        top[0].metric('Accuracy', f"{metrics.get('accuracy', 0):.2%}")
-        top[1].metric('Precision', f"{metrics.get('precision', 0):.2%}")
-        top[2].metric('Recall', f"{metrics.get('recall', 0):.2%}")
-        top[3].metric('F1 Score', f"{metrics.get('f1_score', 0):.2%}")
-        top[4].metric('ROC-AUC', f"{metrics.get('roc_auc', 0):.2%}")
 
-        data_left, data_right = st.columns([1, 1])
-        with data_left:
-            st.subheader('Confusion Matrix')
-            matrix = metrics.get('confusion_matrix', [[0, 0], [0, 0]])
-            st.dataframe(
-                pd.DataFrame(matrix, index=['Actual Legitimate', 'Actual Phishing'], columns=['Pred Legitimate', 'Pred Phishing']),
-                use_container_width=True,
-            )
-            st.subheader('Dataset Preview')
-            dataset_df = load_dataset_preview()
-            st.dataframe(dataset_df.head(10), use_container_width=True)
-        with data_right:
-            st.subheader('Classification Report')
-            report = metrics.get('class_report', {})
-            if report:
-                st.dataframe(pd.DataFrame(report).T, use_container_width=True)
-            st.subheader('Training Metadata')
-            st.write(f"Training size: {metrics.get('train_size', 'N/A')}")
-            st.write(f"Test size: {metrics.get('test_size', 'N/A')}")
-            if st.button('Retrain Model Now', use_container_width=True):
-                with st.spinner('Retraining model...'):
-                    _, summary = train_and_save_model()
-                    db.record_training_run(summary, actor_user_id=user['id'])
-                    db.log_event(
-                        actor_user_id=user['id'],
-                        action='train_model',
-                        target_type='model',
-                        description=f'Model retrained from the metrics page with accuracy {summary.accuracy:.2%}.',
-                        severity='warning',
-                    )
-                    refresh_caches()
-                st.success('Model retrained successfully.')
-                st.rerun()
+        # Metrics Overview Cards
+        st.markdown("<div class='stats-grid'>", unsafe_allow_html=True)
+        st.markdown("<div class='metric-card'>", unsafe_allow_html=True)
+        st.markdown("<h3 class='card-title'>Accuracy</h3>", unsafe_allow_html=True)
+        st.markdown(f"<div class='metric-value'>{metrics.get('accuracy', 0):.2%}</div>", unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
+
+        st.markdown("<div class='metric-card'>", unsafe_allow_html=True)
+        st.markdown("<h3 class='card-title'>Precision</h3>", unsafe_allow_html=True)
+        st.markdown(f"<div class='metric-value'>{metrics.get('precision', 0):.2%}</div>", unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
+
+        st.markdown("<div class='metric-card'>", unsafe_allow_html=True)
+        st.markdown("<h3 class='card-title'>Recall</h3>", unsafe_allow_html=True)
+        st.markdown(f"<div class='metric-value'>{metrics.get('recall', 0):.2%}</div>", unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
+
+        st.markdown("<div class='metric-card'>", unsafe_allow_html=True)
+        st.markdown("<h3 class='card-title'>F1 Score</h3>", unsafe_allow_html=True)
+        st.markdown(f"<div class='metric-value'>{metrics.get('f1_score', 0):.2%}</div>", unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
+
+        st.markdown("<div class='metric-card'>", unsafe_allow_html=True)
+        st.markdown("<h3 class='card-title'>ROC-AUC</h3>", unsafe_allow_html=True)
+        st.markdown(f"<div class='metric-value'>{metrics.get('roc_auc', 0):.2%}</div>", unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
+
+        # Data Analysis Section
+        st.markdown("<div class='analytics-grid'>", unsafe_allow_html=True)
+
+        st.markdown("<div class='chart-card'>", unsafe_allow_html=True)
+        st.markdown("<h3 class='card-title'>Confusion Matrix</h3>", unsafe_allow_html=True)
+        matrix = metrics.get('confusion_matrix', [[0, 0], [0, 0]])
+        st.dataframe(
+            pd.DataFrame(matrix, index=['Actual Legitimate', 'Actual Phishing'], columns=['Pred Legitimate', 'Pred Phishing']),
+            use_container_width=True,
+        )
+        st.markdown("</div>", unsafe_allow_html=True)
+
+        st.markdown("<div class='chart-card'>", unsafe_allow_html=True)
+        st.markdown("<h3 class='card-title'>Dataset Preview</h3>", unsafe_allow_html=True)
+        dataset_df = load_dataset_preview()
+        st.dataframe(dataset_df.head(10), use_container_width=True)
+        st.markdown("</div>", unsafe_allow_html=True)
+
+        st.markdown("<div class='chart-card'>", unsafe_allow_html=True)
+        st.markdown("<h3 class='card-title'>Classification Report</h3>", unsafe_allow_html=True)
+        report = metrics.get('class_report', {})
+        if report:
+            st.dataframe(pd.DataFrame(report).T, use_container_width=True)
+        st.markdown("</div>", unsafe_allow_html=True)
+
+        st.markdown("<div class='insight-card'>", unsafe_allow_html=True)
+        st.markdown("<h3 class='card-title'>Training Metadata</h3>", unsafe_allow_html=True)
+        st.markdown(f"<p><strong>Training size:</strong> {metrics.get('train_size', 'N/A')}</p>", unsafe_allow_html=True)
+        st.markdown(f"<p><strong>Test size:</strong> {metrics.get('test_size', 'N/A')}</p>", unsafe_allow_html=True)
+        if st.button('Retrain Model Now', use_container_width=True):
+            with st.spinner('Retraining model...'):
+                _, summary = train_and_save_model()
+                db.record_training_run(summary, actor_user_id=user['id'])
+                db.log_event(
+                    actor_user_id=user['id'],
+                    action='train_model',
+                    target_type='model',
+                    description=f'Model retrained from the metrics page with accuracy {summary.accuracy:.2%}.',
+                    severity='warning',
+                )
+                refresh_caches()
+            st.success('Model retrained successfully.')
+            st.rerun()
+        st.markdown("</div>", unsafe_allow_html=True)
 
         runs = db.get_training_runs(limit=10)
         if runs:
-            st.subheader('Recent Training Runs')
+            st.markdown("<div class='chart-card'>", unsafe_allow_html=True)
+            st.markdown("<h3 class='card-title'>Recent Training Runs</h3>", unsafe_allow_html=True)
             st.dataframe(pd.DataFrame(runs), use_container_width=True)
+            st.markdown("</div>", unsafe_allow_html=True)
 
-        st.subheader('Raw Metrics JSON')
+        st.markdown("<div class='insight-card'>", unsafe_allow_html=True)
+        st.markdown("<h3 class='card-title'>Raw Metrics JSON</h3>", unsafe_allow_html=True)
         st.code(json.dumps(metrics, indent=2), language='json')
+        st.markdown("</div>", unsafe_allow_html=True)
+
+        st.markdown("</div>", unsafe_allow_html=True)
+
     except ModelNotFoundError as exc:
         st.error(str(exc))
 
 
 def render_platform_page() -> None:
     render_page_header('Platform Architecture', 'A cleaner high-level description of how the implemented system is structured across interface, model, security, and database layers.', 'System')
-    cols = st.columns(2)
-    cols[0].markdown(
-        """
-        <div class='panel-card'>
-            <h3>Application stack</h3>
-            <ul>
-                <li><strong>Frontend:</strong> Streamlit drives the landing page, authentication pages, dashboards, and all task-specific screens.</li>
-                <li><strong>Machine learning:</strong> scikit-learn is used with TF IDF feature extraction and Logistic Regression classification.</li>
-                <li><strong>Database:</strong> SQLite stores users, scan history, audit logs, and training runs in a portable relational file.</li>
-            </ul>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-    cols[1].markdown(
-        """
-        <div class='panel-card'>
-            <h3>Operational capabilities</h3>
-            <ul>
-                <li>Secure registration, login, and role-based access control.</li>
-                <li>Single-message analysis and batch processing workflows.</li>
-                <li>Saved history, analytics, report export, and user feedback notes.</li>
-                <li>Administrative monitoring, user management, and audit visibility.</li>
-            </ul>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+
+    st.markdown("<div class='analytics-grid'>", unsafe_allow_html=True)
+
+    st.markdown("<div class='insight-card'>", unsafe_allow_html=True)
+    st.markdown("<h3 class='card-title'>Application Stack</h3>", unsafe_allow_html=True)
+    st.markdown("""
+    <ul>
+        <li><strong>Frontend:</strong> Streamlit drives the landing page, authentication pages, dashboards, and all task-specific screens.</li>
+        <li><strong>Machine learning:</strong> scikit-learn is used with TF IDF feature extraction and Logistic Regression classification.</li>
+        <li><strong>Database:</strong> SQLite stores users, scan history, audit logs, and training runs in a portable relational file.</li>
+    </ul>
+    """, unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    st.markdown("<div class='insight-card'>", unsafe_allow_html=True)
+    st.markdown("<h3 class='card-title'>Operational Capabilities</h3>", unsafe_allow_html=True)
+    st.markdown("""
+    <ul>
+        <li>Secure registration, login, and role-based access control.</li>
+        <li>Single-message analysis and batch processing workflows.</li>
+        <li>Saved history, analytics, report export, and user feedback notes.</li>
+        <li>Administrative monitoring, user management, and audit visibility.</li>
+    </ul>
+    """, unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    st.markdown("</div>", unsafe_allow_html=True)
 
 
 def render_account_page(user: dict) -> None:
-    st.markdown("<div class=\"page-container\">", unsafe_allow_html=True)
-    st.markdown("<div class=\"page-header\"><h1 class=\"page-title\">Account Settings</h1><p class=\"page-subtitle\">Manage your profile, security settings, and account preferences.</p></div>", unsafe_allow_html=True)
+    st.markdown("<div class='page-container'>", unsafe_allow_html=True)
+    st.markdown("<div class='page-header'><h1 class='page-title'>Account Settings</h1><p class='page-subtitle'>Manage your profile, security settings, and account preferences.</p></div>", unsafe_allow_html=True)
 
     col1, col2 = st.columns([1, 1])
     with col1:
-        st.markdown("<div class=\"card\">", unsafe_allow_html=True)
-        st.markdown("<h3 class=\"card-title\">👤 Profile Information</h3>", unsafe_allow_html=True)
+        st.markdown("<div class='card'>", unsafe_allow_html=True)
+        st.markdown("<div class='card-header'><h3 class='card-title'>👤 Profile Information</h3></div><div class='card-body'>", unsafe_allow_html=True)
 
         with st.form('profile_form'):
-            st.markdown("<div class=\"form-group\"><label class=\"form-label\">Full Name</label>", unsafe_allow_html=True)
+            st.markdown("<div class='form-group'><label class='form-label'>Full Name</label>", unsafe_allow_html=True)
             full_name = st.text_input('', value=user.get('full_name', ''), label_visibility='collapsed')
             st.markdown("</div>", unsafe_allow_html=True)
 
-            st.markdown("<div class=\"form-group\"><label class=\"form-label\">Institution</label>", unsafe_allow_html=True)
+            st.markdown("<div class='form-group'><label class='form-label'>Institution</label>", unsafe_allow_html=True)
             institution = st.text_input('', value=user.get('institution', ''), label_visibility='collapsed')
             st.markdown("</div>", unsafe_allow_html=True)
 
-            st.markdown("<div class=\"form-group\"><label class=\"form-label\">Bio</label>", unsafe_allow_html=True)
+            st.markdown("<div class='form-group'><label class='form-label'>Bio</label>", unsafe_allow_html=True)
             bio = st.text_area('', value=user.get('bio', ''), height=100, label_visibility='collapsed')
             st.markdown("</div>", unsafe_allow_html=True)
 
@@ -1240,22 +1392,22 @@ def render_account_page(user: dict) -> None:
                     )
                     st.success('✅ Profile updated successfully.')
                     st.rerun()
-        st.markdown("</div>", unsafe_allow_html=True)
+        st.markdown("</div></div>", unsafe_allow_html=True)
 
     with col2:
-        st.markdown("<div class=\"card\">", unsafe_allow_html=True)
-        st.markdown("<h3 class=\"card-title\">🔐 Change Password</h3>", unsafe_allow_html=True)
+        st.markdown("<div class='card'>", unsafe_allow_html=True)
+        st.markdown("<div class='card-header'><h3 class='card-title'>🔐 Change Password</h3></div><div class='card-body'>", unsafe_allow_html=True)
 
         with st.form('password_form'):
-            st.markdown("<div class=\"form-group\"><label class=\"form-label\">Current Password</label>", unsafe_allow_html=True)
+            st.markdown("<div class='form-group'><label class='form-label'>Current Password</label>", unsafe_allow_html=True)
             current_password = st.text_input('', type='password', label_visibility='collapsed')
             st.markdown("</div>", unsafe_allow_html=True)
 
-            st.markdown("<div class=\"form-group\"><label class=\"form-label\">New Password</label>", unsafe_allow_html=True)
+            st.markdown("<div class='form-group'><label class='form-label'>New Password</label>", unsafe_allow_html=True)
             new_password = st.text_input('', type='password', label_visibility='collapsed')
             st.markdown("</div>", unsafe_allow_html=True)
 
-            st.markdown("<div class=\"form-group\"><label class=\"form-label\">Confirm New Password</label>", unsafe_allow_html=True)
+            st.markdown("<div class='form-group'><label class='form-label'>Confirm New Password</label>", unsafe_allow_html=True)
             confirm_password = st.text_input('', type='password', label_visibility='collapsed')
             st.markdown("</div>", unsafe_allow_html=True)
 
@@ -1278,11 +1430,11 @@ def render_account_page(user: dict) -> None:
                         severity='warning',
                     )
                     st.success('✅ Password updated successfully.')
-        st.markdown("</div>", unsafe_allow_html=True)
+        st.markdown("</div></div>", unsafe_allow_html=True)
 
     # Account Summary
-    st.markdown("<div class=\"card\">", unsafe_allow_html=True)
-    st.markdown("<h3 class=\"card-title\">📊 Account Summary</h3>", unsafe_allow_html=True)
+    st.markdown("<div class='card'>", unsafe_allow_html=True)
+    st.markdown("<div class='card-header'><h3 class='card-title'>📊 Account Summary</h3></div><div class='card-body'>", unsafe_allow_html=True)
 
     stats_data = db.get_user_statistics(user['id'])
     summary_cols = st.columns(4)
@@ -1292,8 +1444,8 @@ def render_account_page(user: dict) -> None:
     summary_cols[3].metric('Account Age', f"{(pd.Timestamp.now() - pd.Timestamp(user.get('created_at', pd.Timestamp.now()))).days} days")
 
     st.markdown(f"""
-    <div style="background: #f8fafc; padding: 1.5rem; border-radius: 8px; margin-top: 1rem;">
-        <h4 style="margin: 0 0 1rem 0; color: #0f172a;">Account Details</h4>
+    <div style="background: var(--surface-soft); padding: 1.5rem; border-radius: 0.75rem; margin-top: 1rem;">
+        <h4 style="margin: 0 0 1rem 0; color: var(--text);">Account Details</h4>
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
             <div><strong>Email:</strong> {user['email']}</div>
             <div><strong>Role:</strong> {user.get('role', 'user').title()}</div>
@@ -1308,28 +1460,45 @@ def render_account_page(user: dict) -> None:
 
     st.markdown("</div></div>", unsafe_allow_html=True)
 
+    st.markdown("</div>", unsafe_allow_html=True)
+
 
 def render_admin_center(user: dict) -> None:
     if not require_admin(user):
         return
 
-    render_page_header('Admin Control Center', 'Manage users, review audit activity, and monitor platform-wide operations from a dedicated administration area.', 'Administration')
+    st.markdown("<div class='page-container'>", unsafe_allow_html=True)
+    st.markdown("<div class='page-header'><h1 class='page-title'>Admin Control Center</h1><p class='page-subtitle'>Manage users, review audit activity, and monitor platform-wide operations from a dedicated administration area.</p></div>", unsafe_allow_html=True)
 
     tab_overview, tab_users, tab_activity = st.tabs(['Overview', 'User Management', 'Audit and Operations'])
 
     with tab_overview:
         platform = db.get_platform_statistics()
         metrics = get_metrics()
-        cards = st.columns(6)
-        cards[0].metric('Total Users', platform['total_users'])
-        cards[1].metric('Active Users', platform['active_users'])
-        cards[2].metric('Administrators', platform['admin_users'])
-        cards[3].metric('Saved Scans', platform['total_scans'])
-        cards[4].metric('High Risk Scans', platform['high_risk_scans'])
-        cards[5].metric('DB Size', f"{platform['db_size_kb']} KB")
+        st.markdown("<div class='stats-grid'>", unsafe_allow_html=True)
+        for label, value in [
+            ('Total Users', platform['total_users']),
+            ('Active Users', platform['active_users']),
+            ('Administrators', platform['admin_users']),
+            ('Saved Scans', platform['total_scans']),
+            ('High Risk Scans', platform['high_risk_scans']),
+            ('DB Size', f"{platform['db_size_kb']} KB"),
+        ]:
+            st.markdown(
+                f"""
+                <div class='metric-card'>
+                    <div><strong>{value}</strong></div>
+                    <div style='color: var(--muted);'>{label}</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+        st.markdown("</div>", unsafe_allow_html=True)
 
         left, right = st.columns([1.15, 1])
         with left:
+            st.markdown("<div class='card'>", unsafe_allow_html=True)
+            st.markdown("<div class='card-header'><h3 class='card-title'>Global Risk Timeline</h3></div><div class='card-body'>", unsafe_allow_html=True)
             global_history = db.get_global_history(limit=500)
             if global_history:
                 gdf = pd.DataFrame(global_history)
@@ -1339,9 +1508,8 @@ def render_admin_center(user: dict) -> None:
                     .size()
                     .unstack(fill_value=0)
                 )
-                st.subheader('Global Risk Timeline')
                 st.line_chart(trend)
-                st.subheader('Recent High-Risk Queue')
+                st.markdown("<h4>Recent High-Risk Queue</h4>", unsafe_allow_html=True)
                 high_df = gdf[gdf['risk_level'] == 'High'][['created_at', 'full_name', 'email', 'predicted_name', 'confidence']].head(15)
                 if not high_df.empty:
                     st.dataframe(high_df, use_container_width=True)
@@ -1349,18 +1517,23 @@ def render_admin_center(user: dict) -> None:
                     st.info('No high-risk records are currently saved.')
             else:
                 st.info('Global scan analytics will appear after users save results.')
+            st.markdown("</div></div>", unsafe_allow_html=True)
         with right:
-            st.subheader('Model Snapshot')
+            st.markdown("<div class='card'>", unsafe_allow_html=True)
+            st.markdown("<div class='card-header'><h3 class='card-title'>Model Snapshot</h3></div><div class='card-body'>", unsafe_allow_html=True)
             if metrics:
                 st.metric('Model Accuracy', f"{metrics.get('accuracy', 0):.2%}")
                 st.metric('F1 Score', f"{metrics.get('f1_score', 0):.2%}")
                 st.metric('ROC AUC', f"{metrics.get('roc_auc', 0):.2%}")
             runs_df = pd.DataFrame(db.get_training_runs(limit=10))
             if not runs_df.empty:
-                st.subheader('Training Run History')
+                st.markdown("<h4>Training Run History</h4>", unsafe_allow_html=True)
                 st.dataframe(runs_df, use_container_width=True)
+            st.markdown("</div></div>", unsafe_allow_html=True)
 
     with tab_users:
+        st.markdown("<div class='card'>", unsafe_allow_html=True)
+        st.markdown("<div class='card-header'><h3 class='card-title'>User Management</h3></div><div class='card-body'>", unsafe_allow_html=True)
         controls = st.columns([2, 1, 1, 1])
         search = controls[0].text_input('Search users', placeholder='name email institution')
         role_filter = controls[1].selectbox('Role', ['All', 'admin', 'user'])
@@ -1374,8 +1547,10 @@ def render_admin_center(user: dict) -> None:
             dataframe_download_button('Download user registry as CSV', users_df, 'user_registry.csv')
         else:
             st.info('No users matched the current filters.')
+        st.markdown("</div></div>", unsafe_allow_html=True)
 
-        st.markdown('### Create User Account')
+        st.markdown("<div class='card'>", unsafe_allow_html=True)
+        st.markdown("<div class='card-header'><h3 class='card-title'>Create User Account</h3></div><div class='card-body'>", unsafe_allow_html=True)
         with st.form('admin_create_user_form'):
             new_cols = st.columns(3)
             full_name = new_cols[0].text_input('Full Name')
@@ -1410,9 +1585,11 @@ def render_admin_center(user: dict) -> None:
                     )
                     st.rerun()
                 st.error(message)
+        st.markdown("</div></div>", unsafe_allow_html=True)
 
         if users:
-            st.markdown('### Manage Existing User')
+            st.markdown("<div class='card'>", unsafe_allow_html=True)
+            st.markdown("<div class='card-header'><h3 class='card-title'>Manage Existing User</h3></div><div class='card-body'>", unsafe_allow_html=True)
             selected_label = st.selectbox(
                 'Select user',
                 [f"#{u['id']} | {u['full_name']} | {u['email']} | {u['role']}" for u in users],
@@ -1472,8 +1649,11 @@ def render_admin_center(user: dict) -> None:
                         )
                         st.success('User password reset successfully.')
                         st.rerun()
+            st.markdown("</div></div>", unsafe_allow_html=True)
 
     with tab_activity:
+        st.markdown("<div class='card'>", unsafe_allow_html=True)
+        st.markdown("<div class='card-header'><h3 class='card-title'>Audit and Operations</h3></div><div class='card-body'>", unsafe_allow_html=True)
         controls = st.columns([1, 2, 1])
         severity = controls[0].selectbox('Severity', ['All', 'info', 'warning', 'critical'])
         search_term = controls[1].text_input('Search audit logs', placeholder='action description or actor email')
@@ -1488,10 +1668,13 @@ def render_admin_center(user: dict) -> None:
 
         global_history = db.get_global_history(limit=limit, risk_level='All')
         if global_history:
-            st.markdown('### Global Scan Export')
+            st.markdown("<h4>Global Scan Export</h4>", unsafe_allow_html=True)
             history_df = pd.DataFrame(global_history)
             st.dataframe(history_df[['created_at', 'full_name', 'email', 'predicted_name', 'risk_level', 'confidence', 'source_type']], use_container_width=True)
             dataframe_download_button('Download global scan history as CSV', history_df, 'global_scan_history.csv')
+        st.markdown("</div></div>", unsafe_allow_html=True)
+
+    st.markdown("</div>", unsafe_allow_html=True)
 
 
 
@@ -1501,6 +1684,8 @@ if not st.session_state.user_id:
         render_login_page()
     elif current_public == 'Register':
         render_register_page()
+    elif current_public == 'Forgot Password':
+        render_forgot_password_page()
     else:
         render_landing()
 else:
